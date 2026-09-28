@@ -79,9 +79,19 @@ async def generate_response(req: GenerateRequest):
                     timeout=30.0
                 )
                 
+                # Automatic fallback on Rate Limit (429)
+                if res.status_code == 429:
+                    payload["model"] = "llama-3.1-8b-instant"
+                    payload.pop("tools", None) # Remove browser tools for fallback model if not supported
+                    res = await http_client.post(
+                        "https://api.groq.com/openai/v1/responses",
+                        json=payload,
+                        headers=headers,
+                        timeout=30.0
+                    )
+
                 if res.status_code == 200:
                     data = res.json()
-                    # The response output is in output_text for the Responses API
                     return {"output": data.get("output_text", str(data))}
                 else:
                     return {"output": f"Groq API Error: {res.text}"}
