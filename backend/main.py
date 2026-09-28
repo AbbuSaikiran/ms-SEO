@@ -32,7 +32,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 class GenerateRequest(BaseModel):
     prompt: str
-    model: str = "gpt-4o-mini"
+    model: str = "llama-3.3-70b-versatile"
 
 @app.post("/generate")
 async def generate_response(req: GenerateRequest):
@@ -52,27 +52,43 @@ async def generate_response(req: GenerateRequest):
                 max_tokens=2048
             )
             return {"output": response.choices[0].message.content}
-        elif req.model.startswith("gemini") or req.model in ("hindsight-ai", "gpt-4o-mini", "gpt-4o"):
-            # Use OpenAI — the OPENAI_API_KEY in .env is valid and ready
-            if not OPENAI_API_KEY or OPENAI_API_KEY == "your_openai_api_key_here":
-                return {"output": "Error: OPENAI_API_KEY is not configured in .env."}
-            # Map gemini requests to best OpenAI equivalent
-            oai_model = "gpt-4o-mini" if req.model not in ("gpt-4o",) else "gpt-4o"
-            client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
-            response = await client.chat.completions.create(
-                model=oai_model,
-                messages=[
-                    {"role": "system", "content": (
-                        "You are WarpIndex (Hindsight AI), an elite AI SEO Architect and Strategist. "
-                        "Generate highly effective, data-driven, and actionable SEO strategies. "
-                        "Use markdown formatting for readability."
-                    )},
-                    {"role": "user", "content": req.prompt}
-                ],
-                temperature=0.7,
-                max_tokens=2048
+        elif req.model.startswith("gemini") or req.model in ("hindsight-ai", "gpt-4o-mini", "gpt-4o", "llama-3.3-70b-versatile"):
+            # Hindsight AI — powered by Groq free tier (llama-3.3-70b-versatile)
+            if not GROQ_API_KEY:
+                return {"output": "Error: GROQ_API_KEY is not configured in .env."}
+            groq_models = [
+                os.getenv("DEFAULT_MODEL", "llama-3.3-70b-versatile"),
+                "llama-3.1-8b-instant",   # fast fallback
+                "mixtral-8x7b-32768",      # alternative fallback
+            ]
+            client = openai.AsyncOpenAI(
+                api_key=GROQ_API_KEY,
+                base_url="https://api.groq.com/openai/v1"
             )
-            return {"output": f"[Hindsight AI via {oai_model}]\n\n{response.choices[0].message.content}"}
+            last_err = "Unknown"
+            for groq_model in groq_models:
+                try:
+                    response = await client.chat.completions.create(
+                        model=groq_model,
+                        messages=[
+                            {"role": "system", "content": (
+                                "You are WarpIndex (Hindsight AI), an elite AI SEO Architect and Strategist. "
+                                "Generate highly effective, data-driven, and actionable SEO strategies. "
+                                "Use markdown formatting for readability."
+                            )},
+                            {"role": "user", "content": req.prompt}
+                        ],
+                        temperature=0.7,
+                        max_tokens=2048
+                    )
+                    return {"output": f"[Hindsight AI via {groq_model}]\n\n{response.choices[0].message.content}"}
+                except openai.RateLimitError:
+                    last_err = "Rate limited"
+                    continue
+                except openai.APIStatusError as e:
+                    last_err = str(e)
+                    continue
+            return {"output": f"All models rate-limited. Please try again in a moment. ({last_err})"}
         else:
             if not GROQ_API_KEY:
                 return {"output": "Error: GROQ_API_KEY is not configured in .env."}
