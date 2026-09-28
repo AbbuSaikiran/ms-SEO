@@ -44,33 +44,65 @@ from dotenv import load_dotenv
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-class GenerateRequest(BaseModel):
-    prompt: str
-    model: str = "gpt-4"
-
-@app.post("/generate")
-async def generate_response(req: GenerateRequest):
-    try:
-        # Route to the correct API based on the model
-        if "gpt-4" in req.model.lower(): # Only route to OpenAI for gpt-4*
-            if not OPENAI_API_KEY or OPENAI_API_KEY == "your_openai_api_key_here":
-                return {"output": "Error: OPENAI_API_KEY is not configured in .env."}
-            client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
-            response = await client.chat.completions.create(
-                model=req.model,
+async def call_groq_llm(prompt: str, system_prompt: str = None) -> str:
+    groq_key = os.getenv("GROQ_API_KEY")
+    if not groq_key:
+        return "Error: GROQ_API_KEY is not configured in .env."
+    client = openai.AsyncOpenAI(
+        api_key=groq_key,
+        base_url="https://api.groq.com/openai/v1"
+    )
+    models = [
+        os.getenv("DEFAULT_MODEL", "openai/gpt-oss-120b"),
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "qwen/qwen3.8-27b",
+        "llama-3.3-70b-versatile"
+    ]
+    seen = set()
+    models_to_try = [m for m in models if not (m in seen or seen.add(m))]
+    
+    sys_content = system_prompt or (
+        "You are WarpIndex (Hindsight AI), an elite AI SEO Architect and Strategist. "
+        "Generate highly effective, data-driven, and actionable SEO strategies. "
+        "Use markdown formatting for readability."
+    )
+    last_err = ""
+    for model_name in models_to_try:
+        try:
+            res = await client.chat.completions.create(
+                model=model_name,
                 messages=[
-                    {"role": "system", "content": "You are WarpIndex, an elite AI SEO Architect and Strategist."},
-                    {"role": "user", "content": req.prompt}
+                    {"role": "system", "content": sys_content},
+                    {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,
                 max_tokens=2048
             )
-            return {"output": response.choices[0].message.content}
+            return res.choices[0].message.content
+        except Exception as e:
+            last_err = str(e)
+            continue
+    return f"Groq Error: {last_err}"
+
+class GenerateRequest(BaseModel):
+    prompt: str
+    model: str = "hindsight-ai"
+
+@app.post("/generate")
+async def generate_response(req: GenerateRequest):
+    try:
+        # 1. Hindsight AI / Groq direct request
+        if req.model in ("hindsight-ai", "default", "groq", "openai/gpt-oss-120b", "openai/gpt-oss-20b"):
+            output = await call_groq_llm(req.prompt)
+            return {"output": output}
+
+        # 2. Ollama
         elif req.model.startswith("ollama:") or req.model == "ollama":
-            # Ollama — hosted service with API key
             OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-            OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "ollama")  # fallback for local
+            OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "ollama")
             ollama_model = req.model.replace("ollama:", "").strip() or os.getenv("OLLAMA_MODEL", "llama3.2")
             client = openai.AsyncOpenAI(
                 api_key=OLLAMA_API_KEY,
@@ -93,9 +125,9 @@ async def generate_response(req: GenerateRequest):
                 return {"output": f"[Hindsight AI via Ollama/{ollama_model}]\n\n{response.choices[0].message.content}"}
             except Exception as e:
                 return {"output": f"Ollama Error: {str(e)}\n\nCheck your OLLAMA_API_KEY or ensure the service is reachable at {OLLAMA_BASE_URL}"}
+
+        # 3. Gemini
         elif req.model.startswith("gemini"):
-            # Gemini 1.5 / 2.0 — requires a Google AI Studio API key (AIza...)
-            # Get yours free at: https://aistudio.google.com/apikey
             import httpx
             GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
             if not GEMINI_API_KEY or GEMINI_API_KEY.startswith("AQ."):
@@ -108,9 +140,7 @@ async def generate_response(req: GenerateRequest):
                         "Then update `GEMINI_API_KEY` in `backend/.env` with the new `AIza...` key."
                     )
                 }
-            # Gemini model fallback chain: 1.5-pro → 1.5-flash → 2.0-flash
-            gemini_model_name = req.model  # e.g. "gemini-1.5-pro", "gemini-1.5-flash"
-            fallback_models = [gemini_model_name, "gemini-1.5-flash", "gemini-2.0-flash"]
+            fallback_models = [req.model, "gemini-1.5-flash", "gemini-2.0-flash"]
             seen = set()
             models_to_try = [m for m in fallback_models if not (m in seen or seen.add(m))]
 
@@ -140,61 +170,38 @@ async def generate_response(req: GenerateRequest):
                     else:
                         return {"output": f"Gemini API Error: {res.text}"}
                 return {"output": f"All Gemini models unavailable. Last error:\n{last_err}"}
-        elif req.model in ("hindsight-ai", "gpt-4o-mini", "gpt-4o", "gpt-4"):
-            # Hindsight AI — powered by OpenAI
-            if not OPENAI_API_KEY:
-                return {"output": "Error: OPENAI_API_KEY is not configured in .env."}
-            openai_models = [
-                os.getenv("DEFAULT_MODEL", "gpt-4"),
-                "gpt-4o-mini",   # fast fallback
-                "mixtral-8x7b-32768",      # alternative fallback
-            ]
-            client = openai.AsyncOpenAI(
-                api_key=OPENAI_API_KEY,
-                base_url="https://api.openai.com/v1"
-            )
-            last_err = "Unknown"
-            for openai_model in openai_models:
+
+        # 4. OpenAI (with automatic Groq fallback on 429 / credit exhaustion)
+        else:
+            openai_key = os.getenv("OPENAI_API_KEY")
+            if openai_key and openai_key != "your_openai_api_key_here":
                 try:
+                    client = openai.AsyncOpenAI(api_key=openai_key)
                     response = await client.chat.completions.create(
-                        model=openai_model,
+                        model=req.model,
                         messages=[
-                            {"role": "system", "content": (
-                                "You are WarpIndex (Hindsight AI), an elite AI SEO Architect and Strategist. "
-                                "Generate highly effective, data-driven, and actionable SEO strategies. "
-                                "Use markdown formatting for readability."
-                            )},
+                            {"role": "system", "content": "You are WarpIndex, an elite AI SEO Architect and Strategist."},
                             {"role": "user", "content": req.prompt}
                         ],
                         temperature=0.7,
                         max_tokens=2048
                     )
-                    return {"output": f"[Hindsight AI via {openai_model}]\n\n{response.choices[0].message.content}"}
-                except openai.RateLimitError:
-                    last_err = "Rate limited"
-                    continue
-                except openai.APIStatusError as e:
-                    last_err = str(e)
-                    continue
-            return {"output": f"All models rate-limited. Please try again in a moment. ({last_err})"}
-        else:
-            if not OPENAI_API_KEY:
-                return {"output": "Error: OPENAI_API_KEY is not configured in .env."}
-            
-            client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
-            try:
-                response = await client.chat.completions.create(
-                    model=req.model,
-                    messages=[
-                        {"role": "system", "content": "You are WarpIndex, an elite AI SEO Architect and Strategist."},
-                        {"role": "user", "content": req.prompt}
-                    ],
-                    temperature=0.7,
-                    max_tokens=2048
-                )
-                return {"output": response.choices[0].message.content}
-            except Exception as e:
-                return {"output": f"OpenAI API Error: {str(e)}"}
+                    return {"output": response.choices[0].message.content}
+                except openai.RateLimitError as e:
+                    # 429 Insufficient quota / credit balance exhausted -> seamless fallback to Groq!
+                    print(f"OpenAI 429 RateLimit/Quota error: {e}. Falling back to Groq 120B...")
+                    groq_res = await call_groq_llm(req.prompt)
+                    return {"output": f"[Notice: OpenAI credit balance exhausted (HTTP 429) — Auto-switched to Groq (120B)]\n\n{groq_res}"}
+                except Exception as e:
+                    err_msg = str(e)
+                    if "429" in err_msg or "insufficient_quota" in err_msg or "credit_balance_exhausted" in err_msg:
+                        print(f"OpenAI Quota exhausted: {e}. Falling back to Groq 120B...")
+                        groq_res = await call_groq_llm(req.prompt)
+                        return {"output": f"[Notice: OpenAI credit balance exhausted (HTTP 429) — Auto-switched to Groq (120B)]\n\n{groq_res}"}
+                    return {"output": f"OpenAI API Error: {err_msg}"}
+            else:
+                # No OpenAI key, use Groq directly
+                return {"output": await call_groq_llm(req.prompt)}
     except Exception as e:
         return {"output": f"AI Generation Error: {str(e)}"}
 

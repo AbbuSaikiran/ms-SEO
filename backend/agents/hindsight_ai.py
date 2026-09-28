@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "llama-3.3-70b-versatile")
-FAST_MODEL = os.getenv("FAST_MODEL", "llama-3.1-8b-instant")
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "openai/gpt-oss-120b")
+FAST_MODEL = os.getenv("FAST_MODEL", "openai/gpt-oss-20b")
 
 
 def get_groq_client():
@@ -23,27 +23,25 @@ def get_groq_client():
 
 async def _call_groq(system: str, user: str, fast: bool = False, max_tokens: int = 2048) -> str:
     client = get_groq_client()
-    model = FAST_MODEL if fast else DEFAULT_MODEL
-    try:
-        res = await client.chat.completions.create(
-            model=model,
-            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-            temperature=0.7,
-            max_tokens=max_tokens
-        )
-        return res.choices[0].message.content
-    except Exception as e:
-        # Fallback to fast model
+    preferred = FAST_MODEL if fast else DEFAULT_MODEL
+    candidate_models = [preferred, "openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b", "llama-3.3-70b-versatile"]
+    seen = set()
+    models = [m for m in candidate_models if not (m in seen or seen.add(m))]
+    
+    last_err = ""
+    for model in models:
         try:
             res = await client.chat.completions.create(
-                model=FAST_MODEL,
+                model=model,
                 messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
                 temperature=0.7,
                 max_tokens=max_tokens
             )
             return res.choices[0].message.content
-        except Exception as e2:
-            return f"Error: {str(e2)}"
+        except Exception as e:
+            last_err = str(e)
+            continue
+    return f"Error: {last_err}"
 
 
 # ─── TOOL 1: KEYWORD INTELLIGENCE (Ahrefs + Semrush) ────────────────────────
