@@ -47,7 +47,7 @@ export default function AIAgentStudio() {
       let modelStr = "openai/gpt-oss-120b"; // default groq
       if (modelRadio) {
         const labelText = modelRadio.nextElementSibling?.textContent || "";
-        if (labelText.includes("Hindsight AI")) modelStr = "ollama:llama3.2";
+        if (labelText.includes("Hindsight AI")) modelStr = "llama-3.3-70b-versatile";
       }
 
       const res = await fetch("http://localhost:8000/generate", {
