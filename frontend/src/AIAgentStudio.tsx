@@ -44,10 +44,10 @@ export default function AIAgentStudio() {
     try {
       // Find the selected model
       const modelRadio = document.querySelector('input[name="model"]:checked') as HTMLInputElement;
-      let modelStr = "openai/gpt-oss-120b"; // default groq
+      let modelStr = "gpt-4o"; // default openai
       if (modelRadio) {
         const labelText = modelRadio.nextElementSibling?.textContent || "";
-        if (labelText.includes("Hindsight AI")) modelStr = "llama-3.3-70b-versatile";
+        if (labelText.includes("Hindsight AI")) modelStr = "gpt-4o";
       }
 
       const res = await fetch("http://localhost:8000/generate", {
