@@ -133,7 +133,7 @@ function AuthScreen({ onLogin }: { onLogin: () => void }) {
 // ==========================================
 // SIDEBAR COMPONENT
 // ==========================================
-function Sidebar({ activePage, setActivePage, handleLogout }: any) {
+function Sidebar({ activePage, setActivePage, handleLogout, session }: any) {
   const navItems = ['Projects', 'SEO Topic Map', 'Writing Studio', 'Keyword Hub', 'Analytics'];
   
   return (
@@ -150,7 +150,7 @@ function Sidebar({ activePage, setActivePage, handleLogout }: any) {
         </div>
 
         <div className="mb-8">
-          <h2 className="text-2xl font-bold leading-tight">Welcome Back 👋,<br/>Jason Doe</h2>
+          <h2 className="text-2xl font-bold leading-tight">Welcome Back 👋,<br/>{session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0] || 'User'}</h2>
           <p className="text-xs text-gray-500 mt-2 font-medium">Last Login: Today</p>
         </div>
 
@@ -372,7 +372,7 @@ export default function App() {
   
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white font-sans flex overflow-hidden">
-      <Sidebar activePage={activePage} setActivePage={setActivePage} handleLogout={() => setSession(null)} />
+      <Sidebar activePage={activePage} setActivePage={setActivePage} handleLogout={() => { supabase.auth.signOut(); setSession(null); }} session={session} />
       <main className="flex-1 flex flex-col h-screen overflow-y-auto px-8 py-6 relative z-10">
         {activePage === 'Dashboard' && <DashboardPage />}
         {activePage === 'Projects' && <GenericPage title="Projects" description="Manage your domains, tracked keywords, and overall SEO campaigns." icon="🗂️" />}
