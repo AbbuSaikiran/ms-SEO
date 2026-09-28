@@ -29,10 +29,10 @@ async def generate_response(prompt: str) -> str:
     if not GEMINI_API_KEY:
         return "Error: GEMINI_API_KEY is not configured in .env."
 
-    print("WarpIndex is thinking (using Hindsight AI / Gemini 1.5 Pro)...", flush=True)
+    print("WarpIndex is thinking (using Hindsight AI / Gemini 3.1 Pro Preview)...", flush=True)
     async with httpx.AsyncClient() as http_client:
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key={GEMINI_API_KEY}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key={GEMINI_API_KEY}"
             payload = {
                 "contents": [{
                     "parts": [{"text": f"System: {SYSTEM_PROMPT}\nUser: {prompt}"}]
