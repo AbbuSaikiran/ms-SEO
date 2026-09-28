@@ -52,6 +52,31 @@ async def generate_response(req: GenerateRequest):
                 max_tokens=2048
             )
             return {"output": response.choices[0].message.content}
+        elif req.model.startswith("ollama:") or req.model == "ollama":
+            # Ollama — runs locally, completely free, no API key needed
+            OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+            ollama_model = req.model.replace("ollama:", "").strip() or os.getenv("OLLAMA_MODEL", "llama3.2")
+            client = openai.AsyncOpenAI(
+                api_key="ollama",  # Ollama doesn't need a real key
+                base_url=f"{OLLAMA_BASE_URL}/v1"
+            )
+            try:
+                response = await client.chat.completions.create(
+                    model=ollama_model,
+                    messages=[
+                        {"role": "system", "content": (
+                            "You are WarpIndex (Hindsight AI), an elite AI SEO Architect and Strategist. "
+                            "Generate highly effective, data-driven, and actionable SEO strategies. "
+                            "Use markdown formatting for readability."
+                        )},
+                        {"role": "user", "content": req.prompt}
+                    ],
+                    temperature=0.7,
+                    max_tokens=2048
+                )
+                return {"output": f"[Hindsight AI via Ollama/{ollama_model}]\n\n{response.choices[0].message.content}"}
+            except Exception as e:
+                return {"output": f"Ollama Error: {str(e)}\n\nMake sure Ollama is running locally: https://ollama.com/download"}
         elif req.model.startswith("gemini") or req.model in ("hindsight-ai", "gpt-4o-mini", "gpt-4o", "llama-3.3-70b-versatile"):
             # Hindsight AI — powered by Groq free tier (llama-3.3-70b-versatile)
             if not GROQ_API_KEY:
