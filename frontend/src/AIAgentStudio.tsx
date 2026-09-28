@@ -47,9 +47,7 @@ export default function AIAgentStudio() {
       let modelStr = "openai/gpt-oss-120b"; // default groq
       if (modelRadio) {
         const labelText = modelRadio.nextElementSibling?.textContent || "";
-        if (labelText.includes("OpenAI")) modelStr = "gpt-4o";
-        else if (labelText.includes("Llama 3")) modelStr = "llama-3.1-8b-instant";
-        else if (labelText.includes("GPT-OSS 120b")) modelStr = "openai/gpt-oss-120b";
+        if (labelText.includes("Hindsight AI")) modelStr = "openai/gpt-oss-120b";
       }
 
       const res = await fetch("http://localhost:8000/generate", {
@@ -155,34 +153,14 @@ export default function AIAgentStudio() {
             <label className="flex items-center space-x-3 p-3 border border-[#00FFAA]/30 bg-[#00FFAA]/5 rounded-xl cursor-pointer">
               <input type="radio" name="model" className="form-radio text-[#00FFAA] bg-black border-white/20 focus:ring-0" defaultChecked />
               <div>
-                <div className="text-sm font-bold text-white">GPT-OSS 120b [Groq]</div>
-                <div className="text-[10px] text-emerald-400">Complex coding tasks • Low latency</div>
+                <div className="text-sm font-bold text-white">Hindsight AI</div>
+                <div className="text-[10px] text-emerald-400">All-in-one SEO Optimization Engine</div>
               </div>
             </label>
-
-            <label className="flex items-center space-x-3 p-3 border border-white/10 hover:border-white/20 bg-black/50 rounded-xl cursor-pointer transition">
-              <input type="radio" name="model" className="form-radio text-white bg-black border-white/20 focus:ring-0" />
-              <div>
-                <div className="text-sm font-bold text-gray-300">Groq (Llama 3)</div>
-                <div className="text-[10px] text-gray-500">Lightning fast inference</div>
-              </div>
-            </label>
-
-            <label className="flex items-center space-x-3 p-3 border border-white/10 hover:border-white/20 bg-black/50 rounded-xl cursor-pointer transition">
-              <input type="radio" name="model" className="form-radio text-white bg-black border-white/20 focus:ring-0" />
-              <div>
-                <div className="text-sm font-bold text-gray-300">OpenAI (GPT-4o)</div>
-                <div className="text-[10px] text-gray-500">Deep reasoning</div>
-              </div>
-            </label>
-
-            <label className="flex items-center space-x-3 p-3 border border-[#5A00FF]/30 bg-[#5A00FF]/5 hover:border-[#5A00FF]/50 rounded-xl cursor-pointer transition">
-              <input type="radio" name="model" className="form-radio text-[#5A00FF] bg-black border-white/20 focus:ring-0" />
-              <div>
-                <div className="text-sm font-bold text-gray-300">Vectorize (Hindsight RAG)</div>
-                <div className="text-[10px] text-[#A67CFF]">Advanced context retrieval</div>
-              </div>
-            </label>
+            
+            <div className="text-[10px] text-gray-500 mt-2 leading-relaxed">
+              Powered by advanced LLMs. Combines the capabilities of Surfer SEO, Ahrefs, Jasper, Semrush, and Alli AI into a single optimization powerhouse.
+            </div>
           </div>
         </div>
 
