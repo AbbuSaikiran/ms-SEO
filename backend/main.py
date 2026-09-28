@@ -29,34 +29,62 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 class GenerateRequest(BaseModel):
     prompt: str
-    model: str = "llama-3.3-70b-versatile"
+    model: str = "openai/gpt-oss-120b"
 
 @app.post("/generate")
 async def generate_response(req: GenerateRequest):
     try:
         # Route to the correct API based on the model
-        if "gpt" in req.model.lower():
+        if "gpt-4" in req.model.lower(): # Only route to OpenAI for gpt-4*
             if not OPENAI_API_KEY or OPENAI_API_KEY == "your_openai_api_key_here":
                 return {"output": "Error: OPENAI_API_KEY is not configured in .env."}
             client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
+            response = await client.chat.completions.create(
+                model=req.model,
+                messages=[
+                    {"role": "system", "content": "You are WarpIndex, an elite AI SEO Architect and Strategist."},
+                    {"role": "user", "content": req.prompt}
+                ],
+                temperature=0.7,
+                max_tokens=2048
+            )
+            return {"output": response.choices[0].message.content}
         else:
             if not GROQ_API_KEY:
                 return {"output": "Error: GROQ_API_KEY is not configured in .env."}
-            client = openai.AsyncOpenAI(
-                api_key=GROQ_API_KEY,
-                base_url="https://api.groq.com/openai/v1"
-            )
             
-        response = await client.chat.completions.create(
-            model=req.model,
-            messages=[
-                {"role": "system", "content": "You are WarpIndex, an expert AI SEO agent. Provide highly effective, and direct answers to help the user with SEO strategy, content generation, and technical audits."},
-                {"role": "user", "content": req.prompt}
-            ],
-            temperature=0.7,
-            max_tokens=1500
-        )
-        return {"output": response.choices[0].message.content}
+            import httpx
+            # Using the new Groq Responses API with built-in Browser Search
+            async with httpx.AsyncClient() as http_client:
+                # We use a tool-compatible model for browser search
+                groq_model = req.model
+                
+                payload = {
+                    "model": groq_model,
+                    "input": [
+                        {"role": "system", "content": "You are WarpIndex, an elite AI SEO Architect and Strategist."},
+                        {"role": "user", "content": req.prompt}
+                    ],
+                    "tools": [{"type": "browser_search"}],
+                    "tool_choice": "auto"
+                }
+                headers = {
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
+                    "Content-Type": "application/json"
+                }
+                res = await http_client.post(
+                    "https://api.groq.com/openai/v1/responses",
+                    json=payload,
+                    headers=headers,
+                    timeout=30.0
+                )
+                
+                if res.status_code == 200:
+                    data = res.json()
+                    # The response output is in output_text for the Responses API
+                    return {"output": data.get("output_text", str(data))}
+                else:
+                    return {"output": f"Groq API Error: {res.text}"}
     except Exception as e:
         return {"output": f"AI Generation Error: {str(e)}"}
 

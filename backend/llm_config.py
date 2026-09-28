@@ -11,9 +11,9 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # Groq Supported Models for SEO Agent
 GROQ_MODELS = {
     "versatile": {
-        "id": "llama-3.3-70b-versatile",
-        "context_window": 131072,
-        "description": "Used for deep SEO reasoning, strategy generation, and causal analysis."
+        "id": "openai/gpt-oss-120b",
+        "context_window": 65536,
+        "description": "Powerful open-source model for complex coding tasks."
     },
     "fast": {
         "id": "llama-3.1-8b-instant",

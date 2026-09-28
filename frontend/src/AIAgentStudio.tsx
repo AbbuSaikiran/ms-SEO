@@ -44,10 +44,12 @@ export default function AIAgentStudio() {
     try {
       // Find the selected model
       const modelRadio = document.querySelector('input[name="model"]:checked') as HTMLInputElement;
-      let modelStr = "llama-3.3-70b-versatile"; // default groq
+      let modelStr = "openai/gpt-oss-120b"; // default groq
       if (modelRadio) {
         const labelText = modelRadio.nextElementSibling?.textContent || "";
         if (labelText.includes("OpenAI")) modelStr = "gpt-4o";
+        else if (labelText.includes("Llama 3")) modelStr = "llama-3.1-8b-instant";
+        else if (labelText.includes("GPT-OSS 120b")) modelStr = "openai/gpt-oss-120b";
       }
 
       const res = await fetch("http://localhost:8000/generate", {
@@ -153,8 +155,16 @@ export default function AIAgentStudio() {
             <label className="flex items-center space-x-3 p-3 border border-[#00FFAA]/30 bg-[#00FFAA]/5 rounded-xl cursor-pointer">
               <input type="radio" name="model" className="form-radio text-[#00FFAA] bg-black border-white/20 focus:ring-0" defaultChecked />
               <div>
-                <div className="text-sm font-bold text-white">Groq (Llama 3)</div>
-                <div className="text-[10px] text-emerald-400">Lightning fast • Default</div>
+                <div className="text-sm font-bold text-white">GPT-OSS 120b [Groq]</div>
+                <div className="text-[10px] text-emerald-400">Complex coding tasks • Low latency</div>
+              </div>
+            </label>
+
+            <label className="flex items-center space-x-3 p-3 border border-white/10 hover:border-white/20 bg-black/50 rounded-xl cursor-pointer transition">
+              <input type="radio" name="model" className="form-radio text-white bg-black border-white/20 focus:ring-0" />
+              <div>
+                <div className="text-sm font-bold text-gray-300">Groq (Llama 3)</div>
+                <div className="text-[10px] text-gray-500">Lightning fast inference</div>
               </div>
             </label>
 
