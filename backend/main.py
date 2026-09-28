@@ -25,6 +25,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 class GenerateRequest(BaseModel):
     prompt: str
@@ -32,18 +33,24 @@ class GenerateRequest(BaseModel):
 
 @app.post("/generate")
 async def generate_response(req: GenerateRequest):
-    if not GROQ_API_KEY:
-        return {"output": "Error: GROQ_API_KEY is not configured."}
-    
     try:
-        client = openai.AsyncOpenAI(
-            api_key=GROQ_API_KEY,
-            base_url="https://api.groq.com/openai/v1"
-        )
+        # Route to the correct API based on the model
+        if "gpt" in req.model.lower():
+            if not OPENAI_API_KEY or OPENAI_API_KEY == "your_openai_api_key_here":
+                return {"output": "Error: OPENAI_API_KEY is not configured in .env."}
+            client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
+        else:
+            if not GROQ_API_KEY:
+                return {"output": "Error: GROQ_API_KEY is not configured in .env."}
+            client = openai.AsyncOpenAI(
+                api_key=GROQ_API_KEY,
+                base_url="https://api.groq.com/openai/v1"
+            )
+            
         response = await client.chat.completions.create(
             model=req.model,
             messages=[
-                {"role": "system", "content": "You are WarpIndex, an expert AI SEO agent. Provide incredibly fast, highly effective, and direct answers to help the user with SEO strategy, content generation, and technical audits."},
+                {"role": "system", "content": "You are WarpIndex, an expert AI SEO agent. Provide highly effective, and direct answers to help the user with SEO strategy, content generation, and technical audits."},
                 {"role": "user", "content": req.prompt}
             ],
             temperature=0.7,
