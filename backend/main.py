@@ -32,7 +32,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 class GenerateRequest(BaseModel):
     prompt: str
-    model: str = "openai/gpt-oss-120b"
+    model: str = "gemini-2.5-flash"
 
 @app.post("/generate")
 async def generate_response(req: GenerateRequest):
@@ -57,28 +57,45 @@ async def generate_response(req: GenerateRequest):
             if not GEMINI_API_KEY:
                 return {"output": "Error: GEMINI_API_KEY is not configured in .env."}
             import httpx
+            # Fallback chain: try models from newest to most accessible
+            gemini_fallback_chain = [
+                req.model,           # Try the requested model first
+                "gemini-2.5-flash",  # Best free-tier model
+                "gemini-2.0-flash",  # Stable fallback
+                "gemini-1.5-flash",  # Wide availability fallback
+            ]
+            # Remove duplicates while preserving order
+            seen = set()
+            gemini_models = [m for m in gemini_fallback_chain if not (m in seen or seen.add(m))]
+
             async with httpx.AsyncClient() as http_client:
-                # Use Gemini REST API
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{req.model}:generateContent?key={GEMINI_API_KEY}"
-                payload = {
-                    "contents": [{
-                        "parts": [{"text": f"You are WarpIndex, an elite AI SEO Architect. User: {req.prompt}"}]
-                    }],
-                    "generationConfig": {
-                        "temperature": 0.7,
-                        "maxOutputTokens": 2048,
+                last_error = "Unknown error"
+                for model_name in gemini_models:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+                    payload = {
+                        "contents": [{
+                            "parts": [{"text": f"You are WarpIndex, an elite AI SEO Architect and Strategist. User: {req.prompt}"}]
+                        }],
+                        "generationConfig": {
+                            "temperature": 0.7,
+                            "maxOutputTokens": 2048,
+                        }
                     }
-                }
-                res = await http_client.post(url, json=payload, timeout=30.0)
-                if res.status_code == 200:
-                    data = res.json()
-                    try:
-                        text = data["candidates"][0]["content"]["parts"][0]["text"]
-                        return {"output": text}
-                    except (KeyError, IndexError):
-                        return {"output": "Error parsing Gemini response."}
-                else:
-                    return {"output": f"Gemini API Error: {res.text}"}
+                    res = await http_client.post(url, json=payload, timeout=30.0)
+                    if res.status_code == 200:
+                        data = res.json()
+                        try:
+                            text = data["candidates"][0]["content"]["parts"][0]["text"]
+                            return {"output": f"[Hindsight AI via {model_name}]\n\n{text}"}
+                        except (KeyError, IndexError):
+                            return {"output": "Error parsing Gemini response."}
+                    elif res.status_code in (429, 503, 404):
+                        # Quota/unavailable — try next model
+                        last_error = res.text
+                        continue
+                    else:
+                        return {"output": f"Gemini API Error ({model_name}): {res.text}"}
+                return {"output": f"All Gemini models exhausted. Last error: {last_error}"}
         else:
             if not GROQ_API_KEY:
                 return {"output": "Error: GROQ_API_KEY is not configured in .env."}

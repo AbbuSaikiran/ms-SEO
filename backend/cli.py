@@ -29,31 +29,44 @@ async def generate_response(prompt: str) -> str:
     if not GEMINI_API_KEY:
         return "Error: GEMINI_API_KEY is not configured in .env."
 
-    print("WarpIndex is thinking (using Hindsight AI / Gemini 3.1 Pro Preview)...", flush=True)
+    # Fallback chain from newest to most accessible free-tier model
+    gemini_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+    
+    print("WarpIndex is thinking (Hindsight AI — Gemini auto-routing)...", flush=True)
     async with httpx.AsyncClient() as http_client:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key={GEMINI_API_KEY}"
-            payload = {
-                "contents": [{
-                    "parts": [{"text": f"System: {SYSTEM_PROMPT}\nUser: {prompt}"}]
-                }],
-                "generationConfig": {
-                    "temperature": 0.7,
-                    "maxOutputTokens": 2048,
+        last_error = "Unknown error"
+        for model_name in gemini_models:
+            print(f"  Trying {model_name}...", flush=True)
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+                payload = {
+                    "contents": [{
+                        "parts": [{"text": f"System: {SYSTEM_PROMPT}\nUser: {prompt}"}]
+                    }],
+                    "generationConfig": {
+                        "temperature": 0.7,
+                        "maxOutputTokens": 2048,
+                    }
                 }
-            }
-            res = await http_client.post(url, json=payload, timeout=60.0)
-            
-            if res.status_code == 200:
-                data = res.json()
-                try:
-                    return data["candidates"][0]["content"]["parts"][0]["text"]
-                except (KeyError, IndexError):
-                    return "Error parsing Gemini response."
-            else:
-                return f"Gemini API Error: {res.text}"
-        except Exception as e:
-            return f"Network Error: {str(e)}"
+                res = await http_client.post(url, json=payload, timeout=60.0)
+                
+                if res.status_code == 200:
+                    data = res.json()
+                    try:
+                        text = data["candidates"][0]["content"]["parts"][0]["text"]
+                        print(f"  ✓ Responded via {model_name}", flush=True)
+                        return text
+                    except (KeyError, IndexError):
+                        return "Error parsing Gemini response."
+                elif res.status_code in (429, 503, 404):
+                    last_error = res.text
+                    continue  # Try next model
+                else:
+                    return f"Gemini API Error ({model_name}): {res.text}"
+            except Exception as e:
+                last_error = str(e)
+                continue
+        return f"All Gemini models exhausted. Last error: {last_error}"
 
 async def interactive_mode():
     print("=========================================================")
