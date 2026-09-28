@@ -6,6 +6,7 @@ load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 VECTORIZE_API_KEY = os.getenv("VECTORIZE_API_KEY")
 VECTORIZE_API_ENDPOINT = os.getenv("VECTORIZE_API_ENDPOINT")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Groq Supported Models for SEO Agent
 GROQ_MODELS = {

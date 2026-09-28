@@ -5,7 +5,6 @@ import { getRepoTree } from './lib/github';
 export default function AIAgentStudio() {
   const location = useLocation();
   const { repo, owner } = location.state || {};
-  const [repoFiles, setRepoFiles] = useState<any[]>([]);
 
   const [messages, setMessages] = useState([
     { role: 'assistant', text: repo ? `Hello! I see you've imported the repository **${owner}/${repo}**. I am your AI SEO Agent. Loading your repository context...` : 'Hello! I am your AI SEO Agent. Give me a topic or URL, and I will generate a complete content strategy, keyword clusters, and write SEO-optimized drafts for you.' }
@@ -20,7 +19,6 @@ export default function AIAgentStudio() {
         getRepoTree(owner, repo, token)
           .then(data => {
             if (data.tree) {
-              setRepoFiles(data.tree.filter((f: any) => f.type === 'blob'));
               setMessages(prev => [...prev, { role: 'assistant', text: `Success! I have securely indexed ${data.tree.length} files from your repository using your read/write permissions. You can now ask me to read specific files or write new optimizations directly back to GitHub.` }]);
             }
           })
@@ -152,6 +150,14 @@ export default function AIAgentStudio() {
               <div>
                 <div className="text-sm font-bold text-gray-300">OpenAI (GPT-4o)</div>
                 <div className="text-[10px] text-gray-500">Deep reasoning</div>
+              </div>
+            </label>
+
+            <label className="flex items-center space-x-3 p-3 border border-[#5A00FF]/30 bg-[#5A00FF]/5 hover:border-[#5A00FF]/50 rounded-xl cursor-pointer transition">
+              <input type="radio" name="model" className="form-radio text-[#5A00FF] bg-black border-white/20 focus:ring-0" />
+              <div>
+                <div className="text-sm font-bold text-gray-300">Vectorize (Hindsight RAG)</div>
+                <div className="text-[10px] text-[#A67CFF]">Advanced context retrieval</div>
               </div>
             </label>
           </div>
