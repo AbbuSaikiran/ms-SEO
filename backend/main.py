@@ -6,6 +6,18 @@ import asyncio
 import json
 import random
 import os
+import sys
+
+# Make sure agents package is importable
+sys.path.insert(0, os.path.dirname(__file__))
+from agents.seo_memory_agent import (
+    log_ranking, get_ranking_history, get_ranking_trend,
+    log_optimization_event, get_optimization_history,
+    log_competitor_move, get_competitor_moves,
+    log_citation, get_citations,
+    save_agent_analysis, get_agent_memory,
+    build_context_for_analysis
+)
 
 app = FastAPI(title="WarpIndex Real-Time API")
 
@@ -276,6 +288,165 @@ def simulate_agent_activity():
 # Start the background simulator
 thread = threading.Thread(target=simulate_agent_activity, daemon=True)
 thread.start()
+
+# ═══════════════════════════════════════════════════════════════════
+# SEO & CITATION MEMORY AGENT ENDPOINTS
+# ═══════════════════════════════════════════════════════════════════
+
+class RankingLogRequest(BaseModel):
+    keyword: str
+    position: int
+    url: str = ""
+    search_engine: str = "Google"
+    notes: str = ""
+
+class OptimizationEventRequest(BaseModel):
+    event_type: str  # content, technical, backlink, meta, schema
+    description: str
+    url: str = ""
+    keyword: str = ""
+    impact_score: int = 0  # -5 to +5
+    outcome_notes: str = ""
+
+class CompetitorMoveRequest(BaseModel):
+    competitor_domain: str
+    move_type: str  # content_update, new_page, backlink_gain, ranking_jump
+    description: str
+    affected_keyword: str = ""
+
+class CitationRequest(BaseModel):
+    source_url: str
+    brand_name: str
+    citation_type: str = "brand_mention"  # backlink, brand_mention, nap_citation
+    mention_text: str = ""
+    domain_authority: int = 0
+
+class AgentAnalyzeRequest(BaseModel):
+    keyword: str = ""
+    question: str = "What should I do next to improve my SEO based on my history?"
+    session_id: str = "default"
+
+# ── Log endpoints ──────────────────────────────────────────────────
+
+@app.post("/agent/log-ranking")
+def api_log_ranking(req: RankingLogRequest):
+    return log_ranking(req.keyword, req.position, req.url, req.search_engine, req.notes)
+
+@app.post("/agent/log-optimization")
+def api_log_optimization(req: OptimizationEventRequest):
+    return log_optimization_event(
+        req.event_type, req.description, req.url,
+        req.keyword, req.impact_score, req.outcome_notes
+    )
+
+@app.post("/agent/log-competitor")
+def api_log_competitor(req: CompetitorMoveRequest):
+    return log_competitor_move(
+        req.competitor_domain, req.move_type, req.description, req.affected_keyword
+    )
+
+@app.post("/agent/log-citation")
+def api_log_citation(req: CitationRequest):
+    return log_citation(
+        req.source_url, req.brand_name, req.citation_type,
+        req.mention_text, req.domain_authority
+    )
+
+# ── Read endpoints ─────────────────────────────────────────────────
+
+@app.get("/agent/rankings")
+def api_get_rankings(keyword: str = "", limit: int = 50):
+    return get_ranking_history(keyword or None, limit)
+
+@app.get("/agent/rankings/trend")
+def api_get_trend(keyword: str):
+    return get_ranking_trend(keyword)
+
+@app.get("/agent/optimizations")
+def api_get_optimizations(keyword: str = "", limit: int = 30):
+    return get_optimization_history(keyword or None, limit)
+
+@app.get("/agent/competitors")
+def api_get_competitors(competitor: str = "", limit: int = 20):
+    return get_competitor_moves(competitor or None, limit)
+
+@app.get("/agent/citations")
+def api_get_citations(brand_name: str = "", limit: int = 30):
+    return get_citations(brand_name or None, limit)
+
+@app.get("/agent/memory")
+def api_get_memory(limit: int = 10):
+    return get_agent_memory(limit)
+
+@app.get("/agent/full-history")
+def api_full_history(keyword: str = ""):
+    """Returns all historical data in one call for dashboard display."""
+    return {
+        "rankings": get_ranking_history(keyword or None, 30),
+        "optimizations": get_optimization_history(keyword or None, 20),
+        "competitors": get_competitor_moves(limit=15),
+        "citations": get_citations(limit=20),
+        "past_recommendations": get_agent_memory(5)
+    }
+
+# ── AI Analysis (the core memory agent) ───────────────────────────
+
+@app.post("/agent/analyze")
+async def api_agent_analyze(req: AgentAnalyzeRequest):
+    """Core Memory Agent: builds full historical context and generates AI recommendations."""
+    if not GROQ_API_KEY:
+        return {"output": "Error: GROQ_API_KEY not configured."}
+
+    # Build rich context from all historical data
+    context = build_context_for_analysis(req.keyword or None)
+
+    system_prompt = """You are the WarpIndex SEO & Citation Memory Agent — an expert SEO strategist with perfect recall of all past optimizations, ranking changes, and competitor moves.
+
+Your job:
+1. Analyze the full historical context provided
+2. Identify what worked and what didn't (based on impact scores and ranking trends)
+3. Spot patterns: which optimizations led to ranking improvements?
+4. Highlight competitor threats based on their recent moves
+5. Give specific, prioritized, actionable recommendations for NEXT STEPS
+6. Reference specific past events from the history to justify your recommendations
+
+Format your response with clear sections: ## Summary, ## What's Working, ## Concerns, ## Next Actions (numbered, prioritized)"""
+
+    user_prompt = f"""{context}
+
+---
+User Question: {req.question}
+{'Focused on keyword: ' + req.keyword if req.keyword else 'Analyzing overall SEO health'}"""
+
+    groq_client = openai.AsyncOpenAI(
+        api_key=GROQ_API_KEY,
+        base_url="https://api.groq.com/openai/v1"
+    )
+
+    try:
+        response = await groq_client.chat.completions.create(
+            model=os.getenv("DEFAULT_MODEL", "llama-3.3-70b-versatile"),
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.6,
+            max_tokens=2048
+        )
+        recommendation = response.choices[0].message.content
+
+        # Save this analysis to agent memory
+        save_agent_analysis(
+            session_id=req.session_id,
+            analysis_type="full_analysis" if not req.keyword else f"keyword:{req.keyword}",
+            context_summary=context[:500],
+            recommendation=recommendation
+        )
+
+        return {"output": recommendation, "context_used": context[:300] + "..."}
+
+    except Exception as e:
+        return {"output": f"Agent Error: {str(e)}"}
 
 # Mount frontend build if it exists (for cloud deployments)
 frontend_dist = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
