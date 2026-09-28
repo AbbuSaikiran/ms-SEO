@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { TopHeader } from './App';
 
 // This is the Home/Dashboard component that was requested
 export default function Home() {
   return (
     <div className="flex flex-col text-white">
+      <TopHeader title="Dashboard" />
       {/* KPI Row */}
       <div className="mb-6">
         <div className="flex justify-between items-end mb-4">

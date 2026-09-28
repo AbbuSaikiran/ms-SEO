@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import AIAgentStudio from './AIAgentStudio';
 import Projects from './Projects';
+import Home from './Home';
 
 // ==========================================
 // LANDING PAGE & AUTH SCREEN
@@ -23,11 +25,6 @@ function AuthScreen({ onLogin }: { onLogin: () => void }) {
           </div>
           <span className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">SEO Map Agent</span>
         </div>
-        <div className="hidden md:flex space-x-8 text-sm font-medium text-gray-300">
-          <a href="#" className="hover:text-[#00FFAA] transition">Features</a>
-          <a href="#" className="hover:text-[#00FFAA] transition">Topic Maps</a>
-          <a href="#" className="hover:text-[#00FFAA] transition">Pricing</a>
-        </div>
       </nav>
 
       {/* Hero Content + Auth */}
@@ -46,11 +43,6 @@ function AuthScreen({ onLogin }: { onLogin: () => void }) {
           <p className="text-lg text-gray-400 mb-8 max-w-xl">
             Build production-quality topic clusters, execute AI-driven keyword research, and write rank-ready content all from one unified studio.
           </p>
-          <div className="flex items-center space-x-4 text-sm font-medium text-gray-500">
-            <div className="flex items-center"><svg className="w-5 h-5 text-[#00FFAA] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg> PostgreSQL Backed</div>
-            <div className="flex items-center"><svg className="w-5 h-5 text-[#00FFAA] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg> Supabase Auth</div>
-            <div className="flex items-center"><svg className="w-5 h-5 text-[#00FFAA] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg> Python AI Agents</div>
-          </div>
         </div>
 
         {/* Right: Auth Card */}
@@ -133,9 +125,17 @@ function AuthScreen({ onLogin }: { onLogin: () => void }) {
 // ==========================================
 // SIDEBAR COMPONENT
 // ==========================================
-function Sidebar({ activePage, setActivePage, handleLogout, session }: any) {
-  const navItems = ['Projects', 'AI SEO Agent', 'Analytics'];
+function Sidebar({ handleLogout, session }: any) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const navItems = [
+    { name: 'Projects', path: '/projects' }, 
+    { name: 'AI SEO Agent', path: '/agent' }, 
+    { name: 'Analytics', path: '/analytics' }
+  ];
   
+  const isActive = (path: string) => location.pathname === path;
+
   return (
     <aside className="w-[280px] bg-[#0A0A0A] border-r border-white/10 flex flex-col shrink-0 rounded-r-[30px] my-2 ml-2 overflow-hidden relative">
       <div className="p-6 h-full flex flex-col relative z-10">
@@ -157,11 +157,11 @@ function Sidebar({ activePage, setActivePage, handleLogout, session }: any) {
         <div className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">Overview</div>
         <nav className="space-y-1 mb-8">
           <button 
-            onClick={() => setActivePage('Dashboard')}
-            className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm font-medium transition ${activePage === 'Dashboard' ? 'bg-[#0066FF]/10 text-white border border-[#0066FF]/30' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'}`}>
-            <svg className={`w-4 h-4 ${activePage === 'Dashboard' ? 'text-[#00FFAA]' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+            onClick={() => navigate('/')}
+            className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm font-medium transition ${isActive('/') ? 'bg-[#0066FF]/10 text-white border border-[#0066FF]/30' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'}`}>
+            <svg className={`w-4 h-4 ${isActive('/') ? 'text-[#00FFAA]' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
             <span>Dashboard</span>
-            {activePage === 'Dashboard' && <div className="ml-auto w-1 h-4 bg-[#00FFAA] rounded-full shadow-[0_0_10px_#00FFAA]"></div>}
+            {isActive('/') && <div className="ml-auto w-1 h-4 bg-[#00FFAA] rounded-full shadow-[0_0_10px_#00FFAA]"></div>}
           </button>
         </nav>
 
@@ -169,12 +169,12 @@ function Sidebar({ activePage, setActivePage, handleLogout, session }: any) {
         <nav className="space-y-1 mb-8">
           {navItems.map(item => (
             <button 
-              key={item} 
-              onClick={() => setActivePage(item)}
-              className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm font-medium transition ${activePage === item ? 'bg-[#0066FF]/10 text-white border border-[#0066FF]/30' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'}`}>
-              <svg className={`w-4 h-4 ${activePage === item ? 'text-[#00FFAA]' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-              <span>{item}</span>
-              {activePage === item && <div className="ml-auto w-1 h-4 bg-[#00FFAA] rounded-full shadow-[0_0_10px_#00FFAA]"></div>}
+              key={item.name} 
+              onClick={() => navigate(item.path)}
+              className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm font-medium transition ${isActive(item.path) ? 'bg-[#0066FF]/10 text-white border border-[#0066FF]/30' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'}`}>
+              <svg className={`w-4 h-4 ${isActive(item.path) ? 'text-[#00FFAA]' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              <span>{item.name}</span>
+              {isActive(item.path) && <div className="ml-auto w-1 h-4 bg-[#00FFAA] rounded-full shadow-[0_0_10px_#00FFAA]"></div>}
             </button>
           ))}
         </nav>
@@ -182,11 +182,11 @@ function Sidebar({ activePage, setActivePage, handleLogout, session }: any) {
         <div className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">System</div>
         <nav className="space-y-1">
           <button 
-            onClick={() => setActivePage('Integrations')}
-            className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm font-medium transition ${activePage === 'Integrations' ? 'bg-white/10 text-white border border-white/5' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'}`}>
-            <svg className={`w-4 h-4 ${activePage === 'Integrations' ? 'text-purple-400' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+            onClick={() => navigate('/integrations')}
+            className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm font-medium transition ${isActive('/integrations') ? 'bg-white/10 text-white border border-white/5' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'}`}>
+            <svg className={`w-4 h-4 ${isActive('/integrations') ? 'text-purple-400' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
             <span>Integrations</span>
-            {activePage === 'Integrations' && <div className="ml-auto w-1 h-4 bg-purple-500 rounded-full"></div>}
+            {isActive('/integrations') && <div className="ml-auto w-1 h-4 bg-purple-500 rounded-full"></div>}
           </button>
         </nav>
 
@@ -196,7 +196,7 @@ function Sidebar({ activePage, setActivePage, handleLogout, session }: any) {
             <div className="absolute inset-0 bg-gradient-to-r from-[#00FFAA]/10 to-[#0066FF]/10 opacity-0 group-hover:opacity-100 transition duration-500"></div>
             <h4 className="font-semibold text-white mb-1">Unlock To Pro</h4>
             <p className="text-[10px] text-gray-400 mb-3 leading-tight">Write 10x faster and unlock advanced SEO insights to dominate Google.</p>
-            <button onClick={() => setActivePage('Pro Upgrade')} className="w-full bg-gradient-to-r from-[#0066FF] to-[#00FFAA] text-black text-xs font-bold py-2 rounded-lg shadow-[0_0_15px_rgba(0,255,170,0.4)] transition transform hover:scale-[1.02]">
+            <button onClick={() => navigate('/upgrade')} className="w-full bg-gradient-to-r from-[#0066FF] to-[#00FFAA] text-black text-xs font-bold py-2 rounded-lg shadow-[0_0_15px_rgba(0,255,170,0.4)] transition transform hover:scale-[1.02]">
               Upgrade Now
             </button>
           </div>
@@ -209,7 +209,7 @@ function Sidebar({ activePage, setActivePage, handleLogout, session }: any) {
 // ==========================================
 // TOP HEADER COMPONENT
 // ==========================================
-function TopHeader({ title }: { title: string }) {
+export function TopHeader({ title }: { title: string }) {
   return (
     <header className="flex justify-between items-center mb-8">
       <div className="flex items-center text-sm font-medium text-gray-400">
@@ -227,97 +227,6 @@ function TopHeader({ title }: { title: string }) {
         </div>
       </div>
     </header>
-  );
-}
-
-// ==========================================
-// PAGES
-// ==========================================
-function DashboardPage() {
-  return (
-    <>
-      <TopHeader title="Dashboard" />
-      {/* KPI Row */}
-      <div className="mb-6">
-        <div className="flex justify-between items-end mb-4">
-          <div>
-            <div className="flex items-center text-xs text-emerald-400 mb-1">
-              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2 animate-pulse"></span> Last Update: 2 min ago
-            </div>
-            <h2 className="text-3xl font-bold">All KPI's<br/>Updates</h2>
-            <a href="#" className="text-xs text-blue-400 hover:underline mt-2 inline-block">See in Detail →</a>
-          </div>
-
-          <div className="flex space-x-4">
-            {/* KPI Cards... simplified for space */}
-            {[
-              { title: 'Total Organic Traffic', val: '12.5k', change: '+15.4%', color: 'emerald' },
-              { title: 'SEO Score', val: '84/100', change: '+3.02', color: 'emerald' },
-              { title: 'Human Score', val: '92%', change: '-1.05%', color: 'red' },
-              { title: 'Total Content Output', val: '148,200', change: '+12%', color: 'emerald' },
-            ].map((kpi, i) => (
-              <div key={i} className="w-56 bg-gradient-to-b from-[#1c1c24] to-[#14141a] border border-white/5 rounded-2xl p-4 relative overflow-hidden group hover:border-white/10 transition cursor-pointer">
-                <span className="text-xs text-gray-400 font-medium">{kpi.title}</span>
-                <div className="flex items-baseline space-x-2 mt-4">
-                  <span className="text-3xl font-bold">{kpi.val}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${kpi.color === 'emerald' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>{kpi.change}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Analytics Row */}
-      <div className="flex space-x-6">
-        <div className="flex-1 bg-[#111] border border-white/5 rounded-2xl p-6">
-          <div className="text-xs text-[#0066FF] font-medium mb-1">📈 Growth Trends</div>
-          <h3 className="text-xl font-bold mb-6">Performance Analytics</h3>
-          <table className="w-full text-left text-sm mt-4">
-            <thead className="text-xs text-gray-500 bg-[#1A1A1A] rounded-lg">
-              <tr>
-                <th className="px-4 py-3 rounded-l-lg font-medium">No</th>
-                <th className="px-4 py-3 font-medium">Title</th>
-                <th className="px-4 py-3 font-medium">Traffic</th>
-                <th className="px-4 py-3 font-medium">SEO Score</th>
-                <th className="px-4 py-3 rounded-r-lg font-medium">Human Score</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {[
-                { id: '#1', title: 'How to map SEO clusters', traffic: '4,200', seo: '98/100', human: '95%' },
-                { id: '#2', title: 'Best SEO agent tools', traffic: '3,150', seo: '92/100', human: '88%' },
-                { id: '#3', title: 'AI content scaling strategies', traffic: '2,800', seo: '85/100', human: '91%' },
-              ].map((row) => (
-                <tr key={row.id} className="hover:bg-white/[0.02] transition cursor-pointer">
-                  <td className="px-4 py-3 text-gray-500 text-xs">{row.id}</td>
-                  <td className="px-4 py-3 font-medium text-xs text-[#00FFAA] hover:underline">{row.title}</td>
-                  <td className="px-4 py-3 text-xs">{row.traffic}</td>
-                  <td className="px-4 py-3"><span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold">{row.seo}</span></td>
-                  <td className="px-4 py-3"><span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold">{row.human}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="w-[320px] bg-[#111] border border-white/5 rounded-2xl p-6 flex flex-col">
-          <div className="text-xs text-[#0066FF] font-medium mb-1">📊 Plan Usage</div>
-          <h3 className="text-lg font-bold mb-8">Professional Plan</h3>
-          <div className="relative flex justify-center mb-8">
-            <svg className="w-48 h-24" viewBox="0 0 100 50">
-              <path d="M10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#1A1A1A" strokeWidth="8" strokeLinecap="round" />
-              <path d="M10 50 A 40 40 0 0 1 90 50" fill="none" stroke="url(#gradient)" strokeWidth="8" strokeLinecap="round" strokeDasharray="125" strokeDashoffset="20" />
-              <defs><linearGradient id="gradient"><stop offset="0%" stopColor="#0066FF" /><stop offset="100%" stopColor="#00FFAA" /></linearGradient></defs>
-            </svg>
-            <div className="absolute bottom-0 text-center flex flex-col items-center">
-              <span className="text-[10px] text-gray-400">Words Generated</span>
-              <span className="text-xl font-bold text-[#00FFAA]">85k<span className="text-gray-500 text-sm">/100k</span></span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
   );
 }
 
@@ -339,13 +248,50 @@ function GenericPage({ title, description, icon }: any) {
   );
 }
 
+function UpgradePage() {
+  const navigate = useNavigate();
+  return (
+    <>
+      <TopHeader title="Upgrade to Pro" />
+      <div className="flex-1 flex items-center justify-center h-[80%]">
+        <div className="bg-[#111] p-10 rounded-3xl border border-[#0066FF]/30 max-w-xl text-center shadow-[0_0_50px_rgba(0,102,255,0.15)] relative overflow-hidden">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[100px] bg-[#0066FF]/40 blur-[80px]"></div>
+          <h2 className="text-4xl font-bold mb-4 relative z-10">Dominate Google <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0066FF] to-[#00FFAA]">Faster</span></h2>
+          <p className="text-gray-400 mb-8 relative z-10">Write 10x faster and unlock advanced AI SEO insights. Get 1,000,000 words generated, unlimited audits, and premium API access.</p>
+          <button className="bg-gradient-to-r from-[#0066FF] to-[#00FFAA] text-black w-full py-4 rounded-xl font-bold shadow-lg transform transition hover:scale-[1.02]">
+            Upgrade for $49/mo
+          </button>
+          <button className="mt-4 text-xs text-gray-500 hover:text-white" onClick={() => navigate('/')}>Go back to Dashboard</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ==========================================
-// MAIN APP ROUTER
+// MAIN APP COMPONENT
 // ==========================================
+function MainLayout({ session, setSession }: { session: any, setSession: any }) {
+  return (
+    <div className="min-h-screen bg-[#0A0A0A] text-white font-sans flex overflow-hidden">
+      <Sidebar handleLogout={() => { supabase.auth.signOut(); setSession(null); }} session={session} />
+      <main className="flex-1 flex flex-col h-screen overflow-y-auto px-8 py-6 relative z-10">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/projects" element={<Projects session={session} />} />
+          <Route path="/agent" element={<><TopHeader title="AI SEO Agent" /><AIAgentStudio /></>} />
+          <Route path="/analytics" element={<GenericPage title="Analytics" description="Track organic traffic, rankings, and AI-driven growth metrics." icon="📈" />} />
+          <Route path="/integrations" element={<GenericPage title="System Integrations" description="Connect your Google Search Console, CMS, Analytics, and external data sources." icon="🔌" />} />
+          <Route path="/upgrade" element={<UpgradePage />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}
+
 export default function App() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activePage, setActivePage] = useState('Dashboard');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -371,36 +317,8 @@ export default function App() {
   }
   
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white font-sans flex overflow-hidden">
-      <Sidebar activePage={activePage} setActivePage={setActivePage} handleLogout={() => { supabase.auth.signOut(); setSession(null); }} session={session} />
-      <main className="flex-1 flex flex-col h-screen overflow-y-auto px-8 py-6 relative z-10">
-        {activePage === 'Dashboard' && <DashboardPage />}
-        {activePage === 'Projects' && <Projects session={session} />}
-        {activePage === 'AI SEO Agent' && (
-          <>
-            <TopHeader title="AI SEO Agent" />
-            <AIAgentStudio />
-          </>
-        )}
-        {activePage === 'Analytics' && <GenericPage title="Analytics" description="Track organic traffic, rankings, and AI-driven growth metrics." icon="📈" />}
-        {activePage === 'Integrations' && <GenericPage title="System Integrations" description="Connect your Google Search Console, CMS, Analytics, and external data sources." icon="🔌" />}
-        {activePage === 'Pro Upgrade' && (
-          <>
-            <TopHeader title="Upgrade to Pro" />
-            <div className="flex-1 flex items-center justify-center h-[80%]">
-              <div className="bg-[#111] p-10 rounded-3xl border border-[#0066FF]/30 max-w-xl text-center shadow-[0_0_50px_rgba(0,102,255,0.15)] relative overflow-hidden">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[100px] bg-[#0066FF]/40 blur-[80px]"></div>
-                <h2 className="text-4xl font-bold mb-4 relative z-10">Dominate Google <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0066FF] to-[#00FFAA]">Faster</span></h2>
-                <p className="text-gray-400 mb-8 relative z-10">Write 10x faster and unlock advanced AI SEO insights. Get 1,000,000 words generated, unlimited audits, and premium API access.</p>
-                <button className="bg-gradient-to-r from-[#0066FF] to-[#00FFAA] text-black w-full py-4 rounded-xl font-bold shadow-lg transform transition hover:scale-[1.02]">
-                  Upgrade for $49/mo
-                </button>
-                <button className="mt-4 text-xs text-gray-500 hover:text-white" onClick={() => setActivePage('Dashboard')}>Go back to Dashboard</button>
-              </div>
-            </div>
-          </>
-        )}
-      </main>
-    </div>
+    <BrowserRouter>
+      <MainLayout session={session} setSession={setSession} />
+    </BrowserRouter>
   );
 }
