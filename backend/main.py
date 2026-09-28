@@ -52,6 +52,33 @@ async def generate_response(req: GenerateRequest):
                 max_tokens=2048
             )
             return {"output": response.choices[0].message.content}
+        elif req.model.startswith("gemini"):
+            GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+            if not GEMINI_API_KEY:
+                return {"output": "Error: GEMINI_API_KEY is not configured in .env."}
+            import httpx
+            async with httpx.AsyncClient() as http_client:
+                # Use Gemini REST API
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{req.model}:generateContent?key={GEMINI_API_KEY}"
+                payload = {
+                    "contents": [{
+                        "parts": [{"text": f"You are WarpIndex, an elite AI SEO Architect. User: {req.prompt}"}]
+                    }],
+                    "generationConfig": {
+                        "temperature": 0.7,
+                        "maxOutputTokens": 2048,
+                    }
+                }
+                res = await http_client.post(url, json=payload, timeout=30.0)
+                if res.status_code == 200:
+                    data = res.json()
+                    try:
+                        text = data["candidates"][0]["content"]["parts"][0]["text"]
+                        return {"output": text}
+                    except (KeyError, IndexError):
+                        return {"output": "Error parsing Gemini response."}
+                else:
+                    return {"output": f"Gemini API Error: {res.text}"}
         else:
             if not GROQ_API_KEY:
                 return {"output": "Error: GROQ_API_KEY is not configured in .env."}

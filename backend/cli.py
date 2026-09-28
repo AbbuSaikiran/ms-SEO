@@ -25,51 +25,33 @@ SYSTEM_PROMPT = (
 )
 
 async def generate_response(prompt: str) -> str:
-    if not GROQ_API_KEY:
-        return "Error: GROQ_API_KEY is not configured in .env."
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    if not GEMINI_API_KEY:
+        return "Error: GEMINI_API_KEY is not configured in .env."
 
-    groq_model = "openai/gpt-oss-120b"
-    
-    payload = {
-        "model": groq_model,
-        "input": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt}
-        ],
-        "tools": [{"type": "browser_search"}],
-        "tool_choice": "auto"
-    }
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    print("WarpIndex is thinking (using Groq's GPT-OSS 120b)...", flush=True)
+    print("WarpIndex is thinking (using Hindsight AI / Gemini 1.5 Pro)...", flush=True)
     async with httpx.AsyncClient() as http_client:
         try:
-            res = await http_client.post(
-                "https://api.groq.com/openai/v1/responses",
-                json=payload,
-                headers=headers,
-                timeout=60.0
-            )
-
-            # Automatic fallback on Rate Limit (429)
-            if res.status_code == 429:
-                print("Rate limit reached. Falling back to openai/gpt-oss-20b...", flush=True)
-                payload["model"] = "openai/gpt-oss-20b"
-                res = await http_client.post(
-                    "https://api.groq.com/openai/v1/responses",
-                    json=payload,
-                    headers=headers,
-                    timeout=60.0
-                )
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key={GEMINI_API_KEY}"
+            payload = {
+                "contents": [{
+                    "parts": [{"text": f"System: {SYSTEM_PROMPT}\nUser: {prompt}"}]
+                }],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 2048,
+                }
+            }
+            res = await http_client.post(url, json=payload, timeout=60.0)
             
             if res.status_code == 200:
                 data = res.json()
-                return data.get("output_text", str(data))
+                try:
+                    return data["candidates"][0]["content"]["parts"][0]["text"]
+                except (KeyError, IndexError):
+                    return "Error parsing Gemini response."
             else:
-                return f"Groq API Error: {res.text}"
+                return f"Gemini API Error: {res.text}"
         except Exception as e:
             return f"Network Error: {str(e)}"
 
