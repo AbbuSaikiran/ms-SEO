@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 import TopicMap from './TopicMap';
 import WritingStudio from './WritingStudio';
+import AIAgentStudio from './AIAgentStudio';
 
 // ==========================================
 // LANDING PAGE & AUTH SCREEN
@@ -134,7 +135,7 @@ function AuthScreen({ onLogin }: { onLogin: () => void }) {
 // SIDEBAR COMPONENT
 // ==========================================
 function Sidebar({ activePage, setActivePage, handleLogout, session }: any) {
-  const navItems = ['Projects', 'SEO Topic Map', 'Writing Studio', 'Keyword Hub', 'Analytics'];
+  const navItems = ['Projects', 'SEO Topic Map', 'Writing Studio', 'AI SEO Agent', 'Analytics'];
   
   return (
     <aside className="w-[280px] bg-[#0A0A0A] border-r border-white/10 flex flex-col shrink-0 rounded-r-[30px] my-2 ml-2 overflow-hidden relative">
@@ -388,7 +389,12 @@ export default function App() {
             <WritingStudio />
           </>
         )}
-        {activePage === 'Keyword Hub' && <GenericPage title="Keyword Hub" description="Discover low-competition, high-volume keywords and map them to your content strategy." icon="🔑" />}
+        {activePage === 'AI SEO Agent' && (
+          <>
+            <TopHeader title="AI SEO Agent" />
+            <AIAgentStudio />
+          </>
+        )}
         {activePage === 'Analytics' && <GenericPage title="Analytics" description="Track organic traffic, rankings, and AI-driven growth metrics." icon="📈" />}
         {activePage === 'Integrations' && <GenericPage title="System Integrations" description="Connect your Google Search Console, CMS, Analytics, and external data sources." icon="🔌" />}
         {activePage === 'Pro Upgrade' && (
