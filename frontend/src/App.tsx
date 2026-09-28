@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
-import TopicMap from './TopicMap';
-import WritingStudio from './WritingStudio';
 import AIAgentStudio from './AIAgentStudio';
 
 // ==========================================
@@ -135,7 +133,7 @@ function AuthScreen({ onLogin }: { onLogin: () => void }) {
 // SIDEBAR COMPONENT
 // ==========================================
 function Sidebar({ activePage, setActivePage, handleLogout, session }: any) {
-  const navItems = ['Projects', 'SEO Topic Map', 'Writing Studio', 'AI SEO Agent', 'Analytics'];
+  const navItems = ['Projects', 'AI SEO Agent', 'Analytics'];
   
   return (
     <aside className="w-[280px] bg-[#0A0A0A] border-r border-white/10 flex flex-col shrink-0 rounded-r-[30px] my-2 ml-2 overflow-hidden relative">
@@ -377,18 +375,6 @@ export default function App() {
       <main className="flex-1 flex flex-col h-screen overflow-y-auto px-8 py-6 relative z-10">
         {activePage === 'Dashboard' && <DashboardPage />}
         {activePage === 'Projects' && <GenericPage title="Projects" description="Manage your domains, tracked keywords, and overall SEO campaigns." icon="🗂️" />}
-        {activePage === 'SEO Topic Map' && (
-          <>
-            <TopHeader title="SEO Topic Map" />
-            <TopicMap />
-          </>
-        )}
-        {activePage === 'Writing Studio' && (
-          <>
-            <TopHeader title="Writing Studio" />
-            <WritingStudio />
-          </>
-        )}
         {activePage === 'AI SEO Agent' && (
           <>
             <TopHeader title="AI SEO Agent" />
