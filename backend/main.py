@@ -32,7 +32,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 class GenerateRequest(BaseModel):
     prompt: str
-    model: str = "gemini-2.5-flash"
+    model: str = "gpt-4o-mini"
 
 @app.post("/generate")
 async def generate_response(req: GenerateRequest):
@@ -52,50 +52,27 @@ async def generate_response(req: GenerateRequest):
                 max_tokens=2048
             )
             return {"output": response.choices[0].message.content}
-        elif req.model.startswith("gemini"):
-            GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-            if not GEMINI_API_KEY:
-                return {"output": "Error: GEMINI_API_KEY is not configured in .env."}
-            import httpx
-            # Fallback chain: try models from newest to most accessible
-            gemini_fallback_chain = [
-                req.model,           # Try the requested model first
-                "gemini-2.5-flash",  # Best free-tier model
-                "gemini-2.0-flash",  # Stable fallback
-                "gemini-1.5-flash",  # Wide availability fallback
-            ]
-            # Remove duplicates while preserving order
-            seen = set()
-            gemini_models = [m for m in gemini_fallback_chain if not (m in seen or seen.add(m))]
-
-            async with httpx.AsyncClient() as http_client:
-                last_error = "Unknown error"
-                for model_name in gemini_models:
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
-                    payload = {
-                        "contents": [{
-                            "parts": [{"text": f"You are WarpIndex, an elite AI SEO Architect and Strategist. User: {req.prompt}"}]
-                        }],
-                        "generationConfig": {
-                            "temperature": 0.7,
-                            "maxOutputTokens": 2048,
-                        }
-                    }
-                    res = await http_client.post(url, json=payload, timeout=30.0)
-                    if res.status_code == 200:
-                        data = res.json()
-                        try:
-                            text = data["candidates"][0]["content"]["parts"][0]["text"]
-                            return {"output": f"[Hindsight AI via {model_name}]\n\n{text}"}
-                        except (KeyError, IndexError):
-                            return {"output": "Error parsing Gemini response."}
-                    elif res.status_code in (429, 503, 404):
-                        # Quota/unavailable — try next model
-                        last_error = res.text
-                        continue
-                    else:
-                        return {"output": f"Gemini API Error ({model_name}): {res.text}"}
-                return {"output": f"All Gemini models exhausted. Last error: {last_error}"}
+        elif req.model.startswith("gemini") or req.model in ("hindsight-ai", "gpt-4o-mini", "gpt-4o"):
+            # Use OpenAI — the OPENAI_API_KEY in .env is valid and ready
+            if not OPENAI_API_KEY or OPENAI_API_KEY == "your_openai_api_key_here":
+                return {"output": "Error: OPENAI_API_KEY is not configured in .env."}
+            # Map gemini requests to best OpenAI equivalent
+            oai_model = "gpt-4o-mini" if req.model not in ("gpt-4o",) else "gpt-4o"
+            client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
+            response = await client.chat.completions.create(
+                model=oai_model,
+                messages=[
+                    {"role": "system", "content": (
+                        "You are WarpIndex (Hindsight AI), an elite AI SEO Architect and Strategist. "
+                        "Generate highly effective, data-driven, and actionable SEO strategies. "
+                        "Use markdown formatting for readability."
+                    )},
+                    {"role": "user", "content": req.prompt}
+                ],
+                temperature=0.7,
+                max_tokens=2048
+            )
+            return {"output": f"[Hindsight AI via {oai_model}]\n\n{response.choices[0].message.content}"}
         else:
             if not GROQ_API_KEY:
                 return {"output": "Error: GROQ_API_KEY is not configured in .env."}
