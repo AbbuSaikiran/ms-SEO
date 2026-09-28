@@ -78,7 +78,54 @@ async def generate_response(req: GenerateRequest):
                 return {"output": f"[Hindsight AI via Ollama/{ollama_model}]\n\n{response.choices[0].message.content}"}
             except Exception as e:
                 return {"output": f"Ollama Error: {str(e)}\n\nCheck your OLLAMA_API_KEY or ensure the service is reachable at {OLLAMA_BASE_URL}"}
-        elif req.model.startswith("gemini") or req.model in ("hindsight-ai", "gpt-4o-mini", "gpt-4o", "llama-3.3-70b-versatile"):
+        elif req.model.startswith("gemini"):
+            # Gemini 1.5 / 2.0 — requires a Google AI Studio API key (AIza...)
+            # Get yours free at: https://aistudio.google.com/apikey
+            import httpx
+            GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+            if not GEMINI_API_KEY or GEMINI_API_KEY.startswith("AQ."):
+                return {
+                    "output": (
+                        "⚠️ **Gemini API key not configured correctly.**\n\n"
+                        "Your current key is a Gemini CLI token, which doesn't work with the REST API.\n\n"
+                        "**Get a free Google AI Studio key in 30 seconds:**\n"
+                        "👉 https://aistudio.google.com/apikey\n\n"
+                        "Then update `GEMINI_API_KEY` in `backend/.env` with the new `AIza...` key."
+                    )
+                }
+            # Gemini model fallback chain: 1.5-pro → 1.5-flash → 2.0-flash
+            gemini_model_name = req.model  # e.g. "gemini-1.5-pro", "gemini-1.5-flash"
+            fallback_models = [gemini_model_name, "gemini-1.5-flash", "gemini-2.0-flash"]
+            seen = set()
+            models_to_try = [m for m in fallback_models if not (m in seen or seen.add(m))]
+
+            system_prompt = (
+                "You are WarpIndex (Hindsight AI), an elite AI SEO Architect and Strategist. "
+                "Generate highly effective, data-driven, and actionable SEO strategies. "
+                "Use markdown formatting for readability."
+            )
+            async with httpx.AsyncClient(timeout=30.0) as http_client:
+                last_err = "Unknown error"
+                for model_name in models_to_try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+                    payload = {
+                        "contents": [{"parts": [{"text": f"{system_prompt}\n\nUser: {req.prompt}"}]}],
+                        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
+                    }
+                    res = await http_client.post(url, json=payload)
+                    if res.status_code == 200:
+                        try:
+                            text = res.json()["candidates"][0]["content"]["parts"][0]["text"]
+                            return {"output": f"[Hindsight AI via {model_name}]\n\n{text}"}
+                        except (KeyError, IndexError):
+                            return {"output": "Error parsing Gemini response."}
+                    elif res.status_code in (404, 429, 503):
+                        last_err = res.text
+                        continue
+                    else:
+                        return {"output": f"Gemini API Error: {res.text}"}
+                return {"output": f"All Gemini models unavailable. Last error:\n{last_err}"}
+        elif req.model in ("hindsight-ai", "gpt-4o-mini", "gpt-4o", "llama-3.3-70b-versatile"):
             # Hindsight AI — powered by Groq free tier (llama-3.3-70b-versatile)
             if not GROQ_API_KEY:
                 return {"output": "Error: GROQ_API_KEY is not configured in .env."}
