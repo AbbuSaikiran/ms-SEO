@@ -81,8 +81,8 @@ async def generate_response(req: GenerateRequest):
                 
                 # Automatic fallback on Rate Limit (429)
                 if res.status_code == 429:
-                    payload["model"] = "llama-3.1-8b-instant"
-                    payload.pop("tools", None) # Remove browser tools for fallback model if not supported
+                    payload["model"] = "openai/gpt-oss-20b"
+                    # Keep tools for this model since it's supported
                     res = await http_client.post(
                         "https://api.groq.com/openai/v1/responses",
                         json=payload,

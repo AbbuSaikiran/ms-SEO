@@ -56,9 +56,8 @@ async def generate_response(prompt: str) -> str:
 
             # Automatic fallback on Rate Limit (429)
             if res.status_code == 429:
-                print("Rate limit reached. Falling back to llama-3.1-8b-instant...", flush=True)
-                payload["model"] = "llama-3.1-8b-instant"
-                payload.pop("tools", None)
+                print("Rate limit reached. Falling back to openai/gpt-oss-20b...", flush=True)
+                payload["model"] = "openai/gpt-oss-20b"
                 res = await http_client.post(
                     "https://api.groq.com/openai/v1/responses",
                     json=payload,
