@@ -1,8 +1,11 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import asyncio
 import json
 import random
+import os
 
 app = FastAPI(title="WarpIndex Real-Time API")
 
@@ -163,3 +166,10 @@ def simulate_agent_activity():
 # Start the background simulator
 thread = threading.Thread(target=simulate_agent_activity, daemon=True)
 thread.start()
+
+# Mount frontend build if it exists (for cloud deployments)
+frontend_dist = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if os.path.exists(frontend_dist):
+    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="static")
+elif os.path.exists(os.path.join(os.path.dirname(__file__), "frontend", "dist")):
+    app.mount("/", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "frontend", "dist"), html=True), name="static")
