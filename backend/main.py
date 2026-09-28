@@ -18,6 +18,10 @@ from agents.seo_memory_agent import (
     save_agent_analysis, get_agent_memory,
     build_context_for_analysis
 )
+from agents.hindsight_ai import (
+    keyword_intelligence, content_optimizer, ai_content_writer,
+    site_audit, competitor_spy, schema_generator, link_building_planner
+)
 
 app = FastAPI(title="WarpIndex Real-Time API")
 
@@ -447,6 +451,86 @@ User Question: {req.question}
 
     except Exception as e:
         return {"output": f"Agent Error: {str(e)}"}
+
+# ════════════════════════════════════════════════════════════
+# HINDSIGHT AI — UNIFIED SEO ENGINE ENDPOINTS
+# ════════════════════════════════════════════════════════════
+
+class KeywordRequest(BaseModel):
+    seed_keyword: str
+    niche: str = ""
+
+class ContentOptimizerRequest(BaseModel):
+    content: str
+    target_keyword: str
+    url: str = ""
+
+class ContentWriterRequest(BaseModel):
+    topic: str
+    content_type: str = "blog_post"  # blog_post, meta_tags, product_description, landing_page, faq_section, schema_markup
+    tone: str = "professional"
+    target_keyword: str = ""
+    word_count: int = 800
+
+class SiteAuditRequest(BaseModel):
+    site_url: str
+    site_description: str = ""
+
+class CompetitorSpyRequest(BaseModel):
+    my_domain: str
+    competitor_domains: str
+    target_keyword: str = ""
+
+class SchemaRequest(BaseModel):
+    page_type: str  # article, product, local_business, faq, how_to, recipe, event
+    page_details: str
+
+class LinkBuildingRequest(BaseModel):
+    domain: str
+    niche: str
+    current_authority: str = "new"
+
+# ── Tool 1: Keyword Intelligence ────────────────────────────
+@app.post("/hindsight/keywords")
+async def api_keyword_intelligence(req: KeywordRequest):
+    result = await keyword_intelligence(req.seed_keyword, req.niche)
+    return {"output": result, "tool": "Keyword Intelligence", "model": "Hindsight AI"}
+
+# ── Tool 2: Content Optimizer ─────────────────────────────
+@app.post("/hindsight/optimize")
+async def api_content_optimizer(req: ContentOptimizerRequest):
+    result = await content_optimizer(req.content, req.target_keyword, req.url)
+    return {"output": result, "tool": "Content Optimizer", "model": "Hindsight AI"}
+
+# ── Tool 3: AI Content Writer ─────────────────────────────
+@app.post("/hindsight/write")
+async def api_content_writer(req: ContentWriterRequest):
+    result = await ai_content_writer(req.topic, req.content_type, req.tone, req.target_keyword, req.word_count)
+    return {"output": result, "tool": "AI Content Writer", "model": "Hindsight AI"}
+
+# ── Tool 4: Site Audit ───────────────────────────────────
+@app.post("/hindsight/audit")
+async def api_site_audit(req: SiteAuditRequest):
+    result = await site_audit(req.site_url, req.site_description)
+    return {"output": result, "tool": "Site Audit", "model": "Hindsight AI"}
+
+# ── Tool 5: Competitor Spy ───────────────────────────────
+@app.post("/hindsight/competitor")
+async def api_competitor_spy(req: CompetitorSpyRequest):
+    result = await competitor_spy(req.my_domain, req.competitor_domains, req.target_keyword)
+    return {"output": result, "tool": "Competitor Spy", "model": "Hindsight AI"}
+
+# ── Tool 6: Schema Generator ─────────────────────────────
+@app.post("/hindsight/schema")
+async def api_schema_generator(req: SchemaRequest):
+    result = await schema_generator(req.page_type, req.page_details)
+    return {"output": result, "tool": "Schema Generator", "model": "Hindsight AI"}
+
+# ── Tool 7: Link Building Planner ──────────────────────────
+@app.post("/hindsight/links")
+async def api_link_building(req: LinkBuildingRequest):
+    result = await link_building_planner(req.domain, req.niche, req.current_authority)
+    return {"output": result, "tool": "Link Building Planner", "model": "Hindsight AI"}
 
 # Mount frontend build if it exists (for cloud deployments)
 frontend_dist = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
