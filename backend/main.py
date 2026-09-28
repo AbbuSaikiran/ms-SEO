@@ -18,6 +18,41 @@ app.add_middleware(
 def read_root():
     return {"status": "WarpIndex Backend is running"}
 
+from pydantic import BaseModel
+import openai
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+class GenerateRequest(BaseModel):
+    prompt: str
+    model: str = "llama-3.3-70b-versatile"
+
+@app.post("/generate")
+async def generate_response(req: GenerateRequest):
+    if not GROQ_API_KEY:
+        return {"output": "Error: GROQ_API_KEY is not configured."}
+    
+    try:
+        client = openai.AsyncOpenAI(
+            api_key=GROQ_API_KEY,
+            base_url="https://api.groq.com/openai/v1"
+        )
+        response = await client.chat.completions.create(
+            model=req.model,
+            messages=[
+                {"role": "system", "content": "You are WarpIndex, an expert AI SEO agent. Provide incredibly fast, highly effective, and direct answers to help the user with SEO strategy, content generation, and technical audits."},
+                {"role": "user", "content": req.prompt}
+            ],
+            temperature=0.7,
+            max_tokens=1500
+        )
+        return {"output": response.choices[0].message.content}
+    except Exception as e:
+        return {"output": f"AI Generation Error: {str(e)}"}
+
 # Real-time WebSocket manager
 class ConnectionManager:
     def __init__(self):

@@ -32,7 +32,7 @@ export default function AIAgentStudio() {
     }
   }, [owner, repo]);
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
@@ -41,14 +41,27 @@ export default function AIAgentStudio() {
     setInput('');
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        text: 'I am analyzing "' + userMsg + '". I will connect to our backend Python AI models to generate a comprehensive SEO strategy shortly.' 
-      }]);
+    try {
+      // Find the selected model
+      const modelRadio = document.querySelector('input[name="model"]:checked') as HTMLInputElement;
+      let modelStr = "llama-3.3-70b-versatile"; // default groq
+      if (modelRadio) {
+        const labelText = modelRadio.nextElementSibling?.textContent || "";
+        if (labelText.includes("OpenAI")) modelStr = "gpt-4o";
+      }
+
+      const res = await fetch("http://localhost:8000/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: userMsg, model: modelStr })
+      });
+      const data = await res.json();
+      setMessages(prev => [...prev, { role: 'assistant', text: data.output }]);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', text: "Error connecting to AI backend." }]);
+    } finally {
       setIsTyping(false);
-    }, 2000);
+    }
   };
 
   return (
