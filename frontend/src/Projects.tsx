@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, GitBranch, Lock, ChevronDown, CheckCircle2, Loader2, Github } from 'lucide-react';
+import { Search, GitBranch, Lock, ChevronDown, CheckCircle2, Loader2 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 
 const Projects = ({ session }: { session: any }) => {
