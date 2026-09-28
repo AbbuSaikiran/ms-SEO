@@ -7,13 +7,18 @@ const ReactCompilerConfig = {};
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react({
-      babel: {
-        plugins: [
-          ["babel-plugin-react-compiler", ReactCompilerConfig],
-        ],
-      },
-    }),
+    react(),
     tailwindcss(),
   ],
+  server: {
+    port: 3000,
+    host: true, // Listen on all IP addresses
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 })

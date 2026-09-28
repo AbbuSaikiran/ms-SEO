@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Search, GitBranch, Lock, ChevronDown, CheckCircle2, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 
 const Projects = ({ session }: { session: any }) => {
+  const navigate = useNavigate();
   const [repos, setRepos] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [githubUser, setGithubUser] = useState<any>(null);
@@ -102,8 +104,12 @@ const Projects = ({ session }: { session: any }) => {
                   <div className="flex items-center justify-center p-8 text-white/40">
                     <Loader2 size={24} className="animate-spin" />
                   </div>
-                ) : repos.length > 0 ? (
-                  repos.map((repo, idx) => (
+                ) : (
+                  [
+                    // Prepend mock repo for demonstration as requested
+                    { name: 'ms-SEO', private: false, updated_at: '2026-09-28T00:00:00Z', owner: { login: 'AbbuSaikiran' } },
+                    ...repos.filter(r => r.name !== 'ms-SEO')
+                  ].map((repo, idx) => (
                     <div key={idx} className="flex items-center justify-between p-4 hover:bg-white/[0.02] rounded-lg transition-colors border border-transparent hover:border-white/10 cursor-pointer">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center border border-white/10 text-white/70">
@@ -119,16 +125,21 @@ const Projects = ({ session }: { session: any }) => {
                           </span>
                         </div>
                       </div>
-                      <button className="bg-white text-black hover:bg-gray-200 px-4 py-1.5 rounded-md text-sm font-medium transition-colors">
+                      <button 
+                        onClick={() => navigate('/agent', { state: { repo: repo.name, owner: repo.owner?.login || githubUser?.login || 'AbbuSaikiran' } })}
+                        className="bg-white text-black hover:bg-gray-200 px-4 py-1.5 rounded-md text-sm font-medium transition-colors"
+                      >
                         Import
                       </button>
                     </div>
                   ))
-                ) : (
-                  <div className="text-center p-8 border border-dashed border-white/10 rounded-xl bg-white/[0.01]">
+                )}
+                
+                {!loading && repos.length === 0 && !githubUser && (
+                  <div className="text-center p-8 border border-dashed border-white/10 rounded-xl bg-white/[0.01] mt-4">
                     <GitBranch size={24} className="mx-auto text-white/30 mb-2" />
                     <h3 className="font-medium text-white/70 mb-1">No repositories found</h3>
-                    <p className="text-sm text-white/40 mb-4">Connect your GitHub account to import repositories.</p>
+                    <p className="text-sm text-white/40 mb-4">Connect your GitHub account to import more repositories.</p>
                     <button 
                       onClick={connectGitHub}
                       className="bg-white text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"

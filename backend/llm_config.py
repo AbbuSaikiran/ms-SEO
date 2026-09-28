@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+VECTORIZE_API_KEY = os.getenv("VECTORIZE_API_KEY")
+VECTORIZE_API_ENDPOINT = os.getenv("VECTORIZE_API_ENDPOINT")
 
 # Groq Supported Models for SEO Agent
 GROQ_MODELS = {
@@ -41,6 +43,11 @@ def verify_setup():
         print("WARNING: GROQ_API_KEY is not set correctly in .env!")
     else:
         print("Groq LLM Configuration is ready.")
+
+    if not VECTORIZE_API_KEY:
+        print("WARNING: VECTORIZE_API_KEY is not set correctly in .env!")
+    else:
+        print("Vectorize RAG Configuration is ready.")
 
 if __name__ == "__main__":
     verify_setup()

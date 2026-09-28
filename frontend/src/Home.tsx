@@ -1,4 +1,4 @@
-import { useState } from 'react';
+
 import { TopHeader } from './App';
 
 // This is the Home/Dashboard component that was requested
@@ -13,7 +13,7 @@ export default function Home() {
             <div className="flex items-center text-xs text-emerald-400 mb-1">
               <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2 animate-pulse"></span> Last Update: 2 min ago
             </div>
-            <h2 className="text-3xl font-bold">All KPI's<br/>Updates</h2>
+            <h2 className="text-3xl font-bold">All KPI's<br />Updates</h2>
             <a href="#" className="text-xs text-blue-400 hover:underline mt-2 inline-block">See in Detail →</a>
           </div>
 

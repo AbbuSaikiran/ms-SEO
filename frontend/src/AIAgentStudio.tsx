@@ -1,11 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { getRepoTree } from './lib/github';
 
 export default function AIAgentStudio() {
+  const location = useLocation();
+  const { repo, owner } = location.state || {};
+  const [repoFiles, setRepoFiles] = useState<any[]>([]);
+
   const [messages, setMessages] = useState([
-    { role: 'assistant', text: 'Hello! I am your AI SEO Agent. Give me a topic or URL, and I will generate a complete content strategy, keyword clusters, and write SEO-optimized drafts for you.' }
+    { role: 'assistant', text: repo ? `Hello! I see you've imported the repository **${owner}/${repo}**. I am your AI SEO Agent. Loading your repository context...` : 'Hello! I am your AI SEO Agent. Give me a topic or URL, and I will generate a complete content strategy, keyword clusters, and write SEO-optimized drafts for you.' }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+
+  useEffect(() => {
+    if (owner && repo) {
+      const token = localStorage.getItem('github_token');
+      if (token) {
+        getRepoTree(owner, repo, token)
+          .then(data => {
+            if (data.tree) {
+              setRepoFiles(data.tree.filter((f: any) => f.type === 'blob'));
+              setMessages(prev => [...prev, { role: 'assistant', text: `Success! I have securely indexed ${data.tree.length} files from your repository using your read/write permissions. You can now ask me to read specific files or write new optimizations directly back to GitHub.` }]);
+            }
+          })
+          .catch(err => {
+            console.error('Failed to load repo tree', err);
+            setMessages(prev => [...prev, { role: 'assistant', text: `Failed to index repository. Please ensure you have connected GitHub with the correct permissions.` }]);
+          });
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', text: `No GitHub token found. Please connect your GitHub account in the Projects tab to allow me to read and write code.` }]);
+      }
+    }
+  }, [owner, repo]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,6 +121,18 @@ export default function AIAgentStudio() {
 
       {/* Right Settings/Context Panel */}
       <div className="w-80 flex flex-col gap-6">
+        {repo && (
+          <div className="bg-[#111] border border-[#00FFAA]/30 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#00FFAA]/10 blur-[40px] rounded-full"></div>
+            <h4 className="text-xs font-bold text-[#00FFAA] uppercase tracking-wider mb-2">Connected Repository</h4>
+            <div className="flex items-center space-x-3 mb-2">
+              <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+              <div className="text-sm font-medium text-white truncate">{owner}/{repo}</div>
+            </div>
+            <p className="text-[10px] text-gray-400">Context loaded. The AI agent is ready to analyze this codebase.</p>
+          </div>
+        )}
+
         {/* Model Selector */}
         <div className="bg-[#111] border border-white/5 rounded-2xl p-5 shadow-lg relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#0066FF]/10 blur-[40px] rounded-full"></div>
