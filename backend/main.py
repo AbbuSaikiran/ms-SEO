@@ -53,11 +53,12 @@ async def generate_response(req: GenerateRequest):
             )
             return {"output": response.choices[0].message.content}
         elif req.model.startswith("ollama:") or req.model == "ollama":
-            # Ollama — runs locally, completely free, no API key needed
+            # Ollama — hosted service with API key
             OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+            OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "ollama")  # fallback for local
             ollama_model = req.model.replace("ollama:", "").strip() or os.getenv("OLLAMA_MODEL", "llama3.2")
             client = openai.AsyncOpenAI(
-                api_key="ollama",  # Ollama doesn't need a real key
+                api_key=OLLAMA_API_KEY,
                 base_url=f"{OLLAMA_BASE_URL}/v1"
             )
             try:
@@ -76,7 +77,7 @@ async def generate_response(req: GenerateRequest):
                 )
                 return {"output": f"[Hindsight AI via Ollama/{ollama_model}]\n\n{response.choices[0].message.content}"}
             except Exception as e:
-                return {"output": f"Ollama Error: {str(e)}\n\nMake sure Ollama is running locally: https://ollama.com/download"}
+                return {"output": f"Ollama Error: {str(e)}\n\nCheck your OLLAMA_API_KEY or ensure the service is reachable at {OLLAMA_BASE_URL}"}
         elif req.model.startswith("gemini") or req.model in ("hindsight-ai", "gpt-4o-mini", "gpt-4o", "llama-3.3-70b-versatile"):
             # Hindsight AI — powered by Groq free tier (llama-3.3-70b-versatile)
             if not GROQ_API_KEY:
