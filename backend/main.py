@@ -43,12 +43,11 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 class GenerateRequest(BaseModel):
     prompt: str
-    model: str = "llama-3.3-70b-versatile"
+    model: str = "gpt-4"
 
 @app.post("/generate")
 async def generate_response(req: GenerateRequest):
@@ -141,24 +140,24 @@ async def generate_response(req: GenerateRequest):
                     else:
                         return {"output": f"Gemini API Error: {res.text}"}
                 return {"output": f"All Gemini models unavailable. Last error:\n{last_err}"}
-        elif req.model in ("hindsight-ai", "gpt-4o-mini", "gpt-4o", "llama-3.3-70b-versatile"):
-            # Hindsight AI — powered by Groq free tier (llama-3.3-70b-versatile)
-            if not GROQ_API_KEY:
-                return {"output": "Error: GROQ_API_KEY is not configured in .env."}
-            groq_models = [
-                os.getenv("DEFAULT_MODEL", "llama-3.3-70b-versatile"),
-                "llama-3.1-8b-instant",   # fast fallback
+        elif req.model in ("hindsight-ai", "gpt-4o-mini", "gpt-4o", "gpt-4"):
+            # Hindsight AI — powered by OpenAI
+            if not OPENAI_API_KEY:
+                return {"output": "Error: OPENAI_API_KEY is not configured in .env."}
+            openai_models = [
+                os.getenv("DEFAULT_MODEL", "gpt-4"),
+                "gpt-4o-mini",   # fast fallback
                 "mixtral-8x7b-32768",      # alternative fallback
             ]
             client = openai.AsyncOpenAI(
-                api_key=GROQ_API_KEY,
-                base_url="https://api.groq.com/openai/v1"
+                api_key=OPENAI_API_KEY,
+                base_url="https://api.openai.com/v1"
             )
             last_err = "Unknown"
-            for groq_model in groq_models:
+            for openai_model in openai_models:
                 try:
                     response = await client.chat.completions.create(
-                        model=groq_model,
+                        model=openai_model,
                         messages=[
                             {"role": "system", "content": (
                                 "You are WarpIndex (Hindsight AI), an elite AI SEO Architect and Strategist. "
@@ -170,7 +169,7 @@ async def generate_response(req: GenerateRequest):
                         temperature=0.7,
                         max_tokens=2048
                     )
-                    return {"output": f"[Hindsight AI via {groq_model}]\n\n{response.choices[0].message.content}"}
+                    return {"output": f"[Hindsight AI via {openai_model}]\n\n{response.choices[0].message.content}"}
                 except openai.RateLimitError:
                     last_err = "Rate limited"
                     continue
@@ -179,51 +178,23 @@ async def generate_response(req: GenerateRequest):
                     continue
             return {"output": f"All models rate-limited. Please try again in a moment. ({last_err})"}
         else:
-            if not GROQ_API_KEY:
-                return {"output": "Error: GROQ_API_KEY is not configured in .env."}
+            if not OPENAI_API_KEY:
+                return {"output": "Error: OPENAI_API_KEY is not configured in .env."}
             
-            import httpx
-            # Using the new Groq Responses API with built-in Browser Search
-            async with httpx.AsyncClient() as http_client:
-                # We use a tool-compatible model for browser search
-                groq_model = req.model
-                
-                payload = {
-                    "model": groq_model,
-                    "input": [
+            client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
+            try:
+                response = await client.chat.completions.create(
+                    model=req.model,
+                    messages=[
                         {"role": "system", "content": "You are WarpIndex, an elite AI SEO Architect and Strategist."},
                         {"role": "user", "content": req.prompt}
                     ],
-                    "tools": [{"type": "browser_search"}],
-                    "tool_choice": "auto"
-                }
-                headers = {
-                    "Authorization": f"Bearer {GROQ_API_KEY}",
-                    "Content-Type": "application/json"
-                }
-                res = await http_client.post(
-                    "https://api.groq.com/openai/v1/responses",
-                    json=payload,
-                    headers=headers,
-                    timeout=30.0
+                    temperature=0.7,
+                    max_tokens=2048
                 )
-                
-                # Automatic fallback on Rate Limit (429)
-                if res.status_code == 429:
-                    payload["model"] = "openai/gpt-oss-20b"
-                    # Keep tools for this model since it's supported
-                    res = await http_client.post(
-                        "https://api.groq.com/openai/v1/responses",
-                        json=payload,
-                        headers=headers,
-                        timeout=30.0
-                    )
-
-                if res.status_code == 200:
-                    data = res.json()
-                    return {"output": data.get("output_text", str(data))}
-                else:
-                    return {"output": f"Groq API Error: {res.text}"}
+                return {"output": response.choices[0].message.content}
+            except Exception as e:
+                return {"output": f"OpenAI API Error: {str(e)}"}
     except Exception as e:
         return {"output": f"AI Generation Error: {str(e)}"}
 
@@ -398,8 +369,8 @@ def api_full_history(keyword: str = ""):
 @app.post("/agent/analyze")
 async def api_agent_analyze(req: AgentAnalyzeRequest):
     """Core Memory Agent: builds full historical context and generates AI recommendations."""
-    if not GROQ_API_KEY:
-        return {"output": "Error: GROQ_API_KEY not configured."}
+    if not OPENAI_API_KEY:
+        return {"output": "Error: OPENAI_API_KEY not configured."}
 
     # Build rich context from all historical data
     context = build_context_for_analysis(req.keyword or None)
@@ -422,14 +393,14 @@ Format your response with clear sections: ## Summary, ## What's Working, ## Conc
 User Question: {req.question}
 {'Focused on keyword: ' + req.keyword if req.keyword else 'Analyzing overall SEO health'}"""
 
-    groq_client = openai.AsyncOpenAI(
-        api_key=GROQ_API_KEY,
-        base_url="https://api.groq.com/openai/v1"
+    openai_client = openai.AsyncOpenAI(
+        api_key=OPENAI_API_KEY,
+        base_url="https://api.openai.com/v1"
     )
 
     try:
-        response = await groq_client.chat.completions.create(
-            model=os.getenv("DEFAULT_MODEL", "llama-3.3-70b-versatile"),
+        response = await openai_client.chat.completions.create(
+            model=os.getenv("DEFAULT_MODEL", "gpt-4"),
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
