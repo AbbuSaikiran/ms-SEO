@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 import AIAgentStudio from './AIAgentStudio';
+import Projects from './Projects';
 
 // ==========================================
 // LANDING PAGE & AUTH SCREEN
@@ -374,7 +375,7 @@ export default function App() {
       <Sidebar activePage={activePage} setActivePage={setActivePage} handleLogout={() => { supabase.auth.signOut(); setSession(null); }} session={session} />
       <main className="flex-1 flex flex-col h-screen overflow-y-auto px-8 py-6 relative z-10">
         {activePage === 'Dashboard' && <DashboardPage />}
-        {activePage === 'Projects' && <GenericPage title="Projects" description="Manage your domains, tracked keywords, and overall SEO campaigns." icon="🗂️" />}
+        {activePage === 'Projects' && <Projects session={session} />}
         {activePage === 'AI SEO Agent' && (
           <>
             <TopHeader title="AI SEO Agent" />
