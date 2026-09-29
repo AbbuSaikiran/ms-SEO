@@ -66,9 +66,13 @@ async function retainInHindsight(content) {
 // ---- 1. Import repo ----
 async function cloneRepo() {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "seo-agent-"));
-  const url = `https://x-access-token:${GITHUB_TOKEN}@github.com/${OWNER}/${REPO}.git`;
+  // Embed the token in the URL so both clone AND push are authenticated
+  const authedUrl = `https://x-access-token:${GITHUB_TOKEN}@github.com/${OWNER}/${REPO}.git`;
   console.log(`Cloning https://github.com/${OWNER}/${REPO}.git (branch: ${BASE_BRANCH})...`);
-  await simpleGit().clone(url, dir, ["--depth", "1", "--branch", BASE_BRANCH]);
+  await simpleGit().clone(authedUrl, dir, ["--depth", "1", "--branch", BASE_BRANCH]);
+  // Override the remote URL on the cloned repo so `git push` uses the token
+  const git = simpleGit(dir);
+  await git.remote(["set-url", "origin", authedUrl]);
   return dir;
 }
 
@@ -79,7 +83,7 @@ async function seoFor(text, file) {
   if (anthropic) {
     // Anthropic Claude
     const msg = await anthropic.messages.create({
-      model: "claude-sonnet-5-5",
+      model: "claude-sonnet-4-5",
       max_tokens: 500,
       system:
         "You are an SEO expert. Reply with JSON only, no markdown: " +
@@ -228,20 +232,41 @@ async function main() {
     return;
   }
 
+  // Configure git identity for the commit
   await git.addConfig("user.name", "seo-agent");
   await git.addConfig("user.email", "seo-agent@users.noreply.github.com");
   await git.commit("chore(seo): add meta tags, sitemap.xml, robots.txt");
-  await git.push("origin", branch);
 
-  const { data: pr } = await octokit.pulls.create({
-    owner: OWNER,
-    repo: REPO,
-    title: "AI SEO update",
-    head: branch,
-    base: BASE_BRANCH,
-    body: `Auto-generated meta tags for ${done.length} pages, plus sitemap.xml and robots.txt. Please review before merging.`,
-  });
-  console.log("PR:", pr.html_url);
+  // Push the new branch — the remote URL already has the token embedded (set in cloneRepo)
+  console.log(`Pushing branch ${branch} to origin...`);
+  try {
+    await git.push("origin", branch, ["--set-upstream"]);
+  } catch (pushErr) {
+    console.error("❌ git push failed. Check that GITHUB_TOKEN has 'contents: write' permission.");
+    console.error(pushErr.message);
+    throw pushErr;
+  }
+
+  // Open a pull request via the GitHub API
+  console.log("Opening pull request...");
+  let pr;
+  try {
+    const res = await octokit.pulls.create({
+      owner: OWNER,
+      repo: REPO,
+      title: "chore(seo): AI SEO update",
+      head: branch,
+      base: BASE_BRANCH,
+      body: `Auto-generated meta tags for ${done.length} pages, plus \`sitemap.xml\` and \`robots.txt\`. Please review before merging.`,
+    });
+    pr = res.data;
+  } catch (prErr) {
+    console.error("❌ PR creation failed. Check that GITHUB_TOKEN has 'pull-requests: write' permission.");
+    console.error(prErr.message);
+    throw prErr;
+  }
+
+  console.log("✅ PR created:", pr.html_url);
 
   // Retain to Hindsight Memory
   await retainInHindsight(
