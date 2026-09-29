@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { simpleGit } from "simple-git";
 import * as cheerio from "cheerio";
 import fg from "fast-glob";
@@ -63,17 +64,61 @@ async function retainInHindsight(content) {
   }
 }
 
+// ---- Helper: run git bypassing Windows Credential Manager ----
+// Windows GCM intercepts git network operations even when the token is embedded
+// in the URL. We fix this by running git with its own isolated HOME directory
+// containing a .gitconfig that explicitly clears credential.helper.
+let _gitHome = null;
+async function getGitHome() {
+  if (_gitHome) return _gitHome;
+  _gitHome = await fs.mkdtemp(path.join(os.tmpdir(), "seo-git-home-"));
+  // Write a minimal .gitconfig that clears the credential helper
+  await fs.writeFile(
+    path.join(_gitHome, ".gitconfig"),
+    `[credential]\n\thelper = \n[user]\n\tname = seo-agent\n\temail = seo-agent@users.noreply.github.com\n`
+  );
+  return _gitHome;
+}
+
+function gitExec(args, cwd) {
+  // Runs git synchronously with env vars that completely bypass GCM
+  const gitHome = _gitHome; // must be pre-populated via getGitHome()
+  execFileSync("git", args, {
+    cwd,
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+      HOME: gitHome,                 // custom HOME so git uses our .gitconfig
+      USERPROFILE: gitHome,          // Windows equivalent of HOME
+      GIT_CONFIG_NOSYSTEM: "1",      // ignore /etc/gitconfig
+      GIT_TERMINAL_PROMPT: "0",      // never prompt for credentials
+      GCM_INTERACTIVE: "Never",      // disable GCM interactive mode
+    },
+  });
+}
+
 // ---- 1. Import repo ----
 async function cloneRepo() {
+  const gitHome = await getGitHome();
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "seo-agent-"));
   // Embed the token in the URL so both clone AND push are authenticated
   const authedUrl = `https://x-access-token:${GITHUB_TOKEN}@github.com/${OWNER}/${REPO}.git`;
   console.log(`Cloning https://github.com/${OWNER}/${REPO}.git (branch: ${BASE_BRANCH})...`);
-  await simpleGit().clone(authedUrl, dir, ["--depth", "1", "--branch", BASE_BRANCH]);
-  // Override the remote URL on the cloned repo so `git push` uses the token
+  // Use direct git subprocess to bypass Windows Credential Manager
+  execFileSync("git", ["clone", "--depth", "1", "--branch", BASE_BRANCH, authedUrl, dir], {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+      HOME: gitHome,
+      USERPROFILE: gitHome,
+      GIT_CONFIG_NOSYSTEM: "1",
+      GIT_TERMINAL_PROMPT: "0",
+      GCM_INTERACTIVE: "Never",
+    },
+  });
+  // Use simple-git for non-network operations (checkout, add, commit)
   const git = simpleGit(dir);
-  await git.remote(["set-url", "origin", authedUrl]);
-  return dir;
+  return { dir, git, authedUrl };
 }
 
 // ---- 2. Generate SEO with Claude (or Groq / OpenAI fallback) ----
@@ -200,8 +245,7 @@ async function writeSitemap(root, pages) {
 // ---- 5. Main: branch, commit, push, PR ----
 async function main() {
   console.log(`Starting GitHub SEO Agent on ${OWNER}/${REPO}...`);
-  const root = await cloneRepo();
-  const git = simpleGit(root);
+  const { dir: root, git, authedUrl } = await cloneRepo();
   const branch = `ai-seo-${Date.now()}`;
   await git.checkoutLocalBranch(branch);
 
@@ -237,14 +281,15 @@ async function main() {
   await git.addConfig("user.email", "seo-agent@users.noreply.github.com");
   await git.commit("chore(seo): add meta tags, sitemap.xml, robots.txt");
 
-  // Push the new branch — the remote URL already has the token embedded (set in cloneRepo)
+  // Push the new branch using direct git subprocess to bypass Windows Credential Manager
   console.log(`Pushing branch ${branch} to origin...`);
   try {
-    await git.push("origin", branch, ["--set-upstream"]);
+    gitExec(["push", "--set-upstream", authedUrl, branch], root);
   } catch (pushErr) {
     console.error("❌ git push failed. Check that GITHUB_TOKEN has 'contents: write' permission.");
-    console.error(pushErr.message);
-    throw pushErr;
+    const msg = pushErr.stderr?.toString() || pushErr.message;
+    console.error(msg);
+    throw new Error(msg);
   }
 
   // Open a pull request via the GitHub API
