@@ -136,7 +136,15 @@ export async function writeToFile(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || "Failed to push code to repository");
+    const rawMsg = err.message || "";
+    if (rawMsg.includes("Resource not accessible by integration")) {
+      throw new Error(
+        "GitHub Permission Error: 'Resource not accessible by integration'.\n" +
+        "Your GitHub Token lacks write access to this repository.\n" +
+        "Fix: Go to GitHub Settings -> Developer Settings -> Personal Access Tokens (Fine-grained), select this repo, and set 'Contents: Read and write'."
+      );
+    }
+    throw new Error(rawMsg || "Failed to push code to repository");
   }
   return res.json();
 }

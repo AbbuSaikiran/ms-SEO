@@ -386,9 +386,23 @@ async def api_github_seo_automate(req: GitHubSEOAutomateRequest):
                 "repo": req.repo
             }
         else:
+            combined_err = err_text or out_text or f"Process failed with exit code {proc.returncode}"
+            if "Resource not accessible by integration" in combined_err:
+                combined_err = (
+                    "GitHub Permission Error: 'Resource not accessible by integration'.\n\n"
+                    "The GitHub token provided does not have write access to create branches or pull requests.\n"
+                    "How to fix:\n"
+                    "1. For Personal Access Token (PAT): Ensure it is a Fine-Grained PAT targeting this repository with:\n"
+                    "   - 'Repository permissions' -> 'Contents': Read and write\n"
+                    "   - 'Repository permissions' -> 'Pull requests': Read and write\n"
+                    "2. For GitHub Actions: Ensure your workflow YAML includes:\n"
+                    "   permissions:\n"
+                    "     contents: write\n"
+                    "     pull-requests: write"
+                )
             return {
                 "success": False,
-                "error": err_text or out_text or f"Process failed with exit code {proc.returncode}"
+                "error": combined_err
             }
     except asyncio.TimeoutError:
         return {"success": False, "error": "Operation timed out after 3 minutes"}

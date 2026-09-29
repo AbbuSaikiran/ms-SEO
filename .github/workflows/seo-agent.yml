@@ -1,0 +1,47 @@
+name: Autonomous SEO Agent
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # Runs weekly on Monday at 03:00 UTC
+  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
+
+# Explicit permissions block to prevent "Resource not accessible by integration"
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  run-seo-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './github-seo-agent/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./github-seo-agent
+        run: npm ci
+
+      - name: Run Autonomous SEO Optimization & Open PR
+        working-directory: ./github-seo-agent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://sybrai.com' }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          VECTORIZE_API_KEY: ${{ secrets.VECTORIZE_API_KEY }}
+        run: node index.js
