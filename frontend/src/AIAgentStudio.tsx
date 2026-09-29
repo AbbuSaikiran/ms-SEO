@@ -18,7 +18,10 @@ import {
   GitPullRequest,
   Terminal,
   Play,
-  UploadCloud
+  UploadCloud,
+  Copy,
+  CornerDownLeft,
+  Trash2
 } from 'lucide-react';
 import { getRepoTree, getFileContent, parseGitHubUrl, getUserRepos, pushCodeToGitHub } from './lib/github';
 
@@ -241,9 +244,36 @@ Connect a GitHub repository using the **+** button below or select files from yo
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const addMenuRef = useRef<HTMLDivElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Dynamic suggestion chips for SEO architecture & strategy
+  const PROMPT_SUGGESTIONS = [
+    { label: '🔍 Audit Meta & Head Tags', prompt: 'Audit my site HTML meta tags, OpenGraph data, title hierarchy, and robots meta directives. Provide precise recommendations.' },
+    { label: '🗺️ Topic Cluster & Keyword Map', prompt: 'Create an SEO topic cluster map with pillar pages, high-intent sub-topics, search intent classifications, and internal linking structure.' },
+    { label: '🧩 Generate Schema JSON-LD', prompt: 'Generate rich Schema.org JSON-LD structured data for Organization, WebSite, Article, and FAQPage with valid semantic properties.' },
+    { label: '⚡ Robots.txt & Sitemap Guide', prompt: 'Analyze and generate optimized robots.txt directives and XML sitemap configuration to maximize crawl budget efficiency.' },
+    { label: '🧠 Hindsight Reflection', prompt: 'Reflect on our past SEO actions and provide strategic next steps to improve rankings and organic search traffic.' },
+    { label: '🎯 Keyword Gap Analysis', prompt: 'Analyze top search competitors and identify high-opportunity organic keyword gaps with low difficulty.' }
+  ];
+
+  // Auto-resize textarea as content changes
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      const scrollH = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${Math.min(Math.max(scrollH, 44), 180)}px`;
+    }
+  }, [input]);
+
+  const copyToClipboard = (text: string, index: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
 
   // Close + menu when clicking outside
   useEffect(() => {
@@ -564,31 +594,101 @@ Connect a GitHub repository using the **+** button below or select files from yo
         <div className="flex-1 overflow-y-auto p-6 space-y-6 z-10 scrollbar-hide">
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] rounded-2xl p-4.5 ${msg.role === 'user' ? 'bg-[#0066FF] text-white rounded-br-none shadow-[0_0_20px_rgba(0,102,255,0.3)]' : 'bg-[#151515] text-gray-200 border border-white/10 rounded-bl-none shadow-lg'}`}>
-                {msg.filesAttached && msg.filesAttached.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-2.5 pb-2.5 border-b border-white/20">
-                    <span className="text-[10px] uppercase font-bold text-white/70 flex items-center gap-1">
-                      <GithubIcon className="w-3 h-3" /> Context:
-                    </span>
-                    {msg.filesAttached.map((f, fi) => (
-                      <span key={fi} className="text-[11px] bg-black/30 border border-white/20 px-2 py-0.5 rounded-md font-mono">
-                        {f}
+              {msg.role === 'user' ? (
+                <div className="max-w-[85%] rounded-2xl rounded-br-sm p-4.5 bg-gradient-to-br from-[#0066FF] to-[#0052cc] text-white shadow-[0_4px_20px_rgba(0,102,255,0.25)] border border-blue-400/20">
+                  {msg.filesAttached && msg.filesAttached.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2.5 pb-2 border-b border-white/20">
+                      <span className="text-[10px] uppercase font-bold text-white/80 flex items-center gap-1">
+                        <GithubIcon className="w-3 h-3" /> Context:
                       </span>
-                    ))}
+                      {msg.filesAttached.map((f, fi) => (
+                        <span key={fi} className="text-[11px] bg-black/30 border border-white/20 px-2 py-0.5 rounded-md font-mono">
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap font-sans selection:bg-white/30">
+                    {msg.text}
                   </div>
-                )}
-                <div className="text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                  {msg.text}
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-start gap-3 max-w-[90%] group">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#0066FF] to-[#00FFAA] flex items-center justify-center text-black font-extrabold text-xs shrink-0 shadow-[0_0_15px_rgba(0,255,170,0.35)] mt-1">
+                    AI
+                  </div>
+
+                  <div className="flex-1 rounded-2xl rounded-tl-sm p-5 bg-[#131316]/95 text-gray-100 border border-white/10 shadow-xl hover:border-white/20 transition-all space-y-3">
+                    {/* Assistant Message Header */}
+                    <div className="flex items-center justify-between pb-2.5 border-b border-white/5 text-[11px] text-gray-400">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-white">WarpIndex SEO Agent</span>
+                        <span className="text-gray-600">•</span>
+                        <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                          Groq 120B / OpenAI
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(msg.text, i)}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-md text-[10px] text-gray-300 hover:text-white transition"
+                        title="Copy response"
+                      >
+                        {copiedIndex === i ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-400" />
+                            <span className="text-emerald-400 font-medium">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Message Body */}
+                    <div className="text-sm leading-relaxed whitespace-pre-wrap font-sans text-gray-200">
+                      {msg.text}
+                    </div>
+
+                    {/* Quick Push to GitHub Action if code is detected */}
+                    {(msg.text.includes('```') || msg.text.includes('<html') || msg.text.includes('<!DOCTYPE') || msg.text.includes('robots.txt')) && (
+                      <div className="pt-3 border-t border-white/5 flex items-center justify-between text-xs">
+                        <span className="text-[11px] text-gray-400 font-mono flex items-center gap-1">
+                          <FileCode className="w-3.5 h-3.5 text-[#00FFAA]" /> Code & SEO recommendation ready
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const codeMatch = msg.text.match(/```(?:html|json|xml|javascript|typescript|bash|txt)?\n([\s\S]*?)```/);
+                            const contentToPush = codeMatch ? codeMatch[1] : msg.text;
+                            openPushModalWithFile('index.html', contentToPush);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-semibold rounded-lg text-xs transition shadow-sm"
+                        >
+                          <UploadCloud className="w-3.5 h-3.5" />
+                          <span>Push to GitHub</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
 
           {isTyping && (
-            <div className="flex justify-start">
-              <div className="bg-[#151515] text-gray-200 border border-white/10 rounded-2xl rounded-bl-none p-4 flex space-x-2 items-center">
+            <div className="flex items-start gap-3 max-w-[85%]">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#0066FF] to-[#00FFAA] flex items-center justify-center text-black font-extrabold text-xs shrink-0 shadow-[0_0_12px_rgba(0,255,170,0.3)] mt-1 animate-pulse">
+                AI
+              </div>
+              <div className="bg-[#131316] text-gray-200 border border-white/10 rounded-2xl rounded-tl-sm p-4 flex space-x-2.5 items-center shadow-lg">
                 <span className="text-xs text-gray-400 mr-2 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#00FFAA] animate-pulse" /> WarpIndex reasoning...
+                  <Sparkles className="w-3.5 h-3.5 text-[#00FFAA] animate-pulse" /> WarpIndex reasoning with Hindsight memory...
                 </span>
                 <span className="w-2 h-2 bg-[#00FFAA] rounded-full animate-bounce"></span>
                 <span className="w-2 h-2 bg-[#0066FF] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
@@ -599,108 +699,240 @@ Connect a GitHub repository using the **+** button below or select files from yo
           <div ref={chatBottomRef} />
         </div>
 
-        {/* Input Area with Claude-Style + Menu */}
-        <div className="p-4 bg-[#111]/90 backdrop-blur-xl border-t border-white/5 z-20">
-          <form onSubmit={handleSend} className="relative flex items-center">
+        {/* Modern Prompt Studio & Input Area */}
+        <div className="p-4 bg-[#0d0d10]/95 backdrop-blur-2xl border-t border-white/10 z-20 space-y-3">
 
-            {/* The + Button */}
-            <div className="relative" ref={addMenuRef}>
+          {/* Quick Prompt Suggestion Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
+            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider shrink-0 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-[#00FFAA]" /> Quick Prompts:
+            </span>
+            {PROMPT_SUGGESTIONS.map((s, idx) => (
               <button
+                key={idx}
                 type="button"
-                onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
-                className="p-2.5 mr-2 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition flex items-center justify-center group"
-                title="Add content from GitHub or project knowledge"
+                onClick={() => {
+                  setInput(s.prompt);
+                  if (textareaRef.current) {
+                    textareaRef.current.focus();
+                  }
+                }}
+                className="px-3 py-1 bg-white/[0.04] hover:bg-white/[0.09] hover:border-white/20 border border-white/10 rounded-full text-xs text-gray-300 hover:text-white whitespace-nowrap transition-all duration-150 shrink-0 flex items-center gap-1.5 shadow-sm active:scale-95"
               >
-                <Plus className={`w-4 h-4 transition-transform duration-200 ${isAddMenuOpen ? 'rotate-45 text-[#00FFAA]' : 'group-hover:rotate-90'}`} />
+                <span>{s.label}</span>
               </button>
+            ))}
+          </div>
 
-              {/* Claude-Style Add Menu Dropdown */}
-              {isAddMenuOpen && (
-                <div className="absolute bottom-12 left-0 w-64 bg-[#181818] border border-white/15 rounded-xl shadow-2xl p-1.5 z-50 backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-2 duration-150">
-                  <div className="text-[10px] uppercase font-bold text-gray-400 px-3 py-1.5 tracking-wider">
-                    Add Repository Knowledge
-                  </div>
-
+          {/* Connected Context Files Pills (if repo files selected) */}
+          {knowledgeFiles.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 px-1">
+              <span className="text-[10px] text-gray-400 font-mono flex items-center gap-1">
+                <GithubIcon className="w-3 h-3 text-[#00FFAA]" /> Attached ({knowledgeFiles.length}):
+              </span>
+              {knowledgeFiles.slice(0, 4).map((kf, ki) => (
+                <span
+                  key={ki}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/5 border border-white/10 rounded-md text-[11px] text-gray-300 font-mono"
+                >
+                  <FileCode className="w-3 h-3 text-emerald-400" />
+                  <span className="max-w-[130px] truncate">{kf.path}</span>
                   <button
                     type="button"
                     onClick={() => {
-                      setIsAddMenuOpen(false);
-                      setIsGitHubModalOpen(true);
-                      setModalTab('select-files');
+                      setKnowledgeFiles(prev => prev.filter(f => f.path !== kf.path));
+                      setSelectedPaths(prev => prev.filter(p => p !== kf.path));
                     }}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2 text-sm text-gray-200 hover:text-white hover:bg-white/10 rounded-lg transition text-left"
+                    className="hover:text-red-400 text-gray-500 ml-0.5"
+                    title="Remove file"
                   >
-                    <GithubIcon className="w-4 h-4 text-[#00FFAA]" />
-                    <div>
-                      <div className="font-medium text-xs">Add from GitHub</div>
-                      <div className="text-[10px] text-gray-400">Select files & folders from repo</div>
-                    </div>
+                    ×
                   </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAddMenuOpen(false);
-                      setIsGitHubModalOpen(true);
-                      setModalTab('select-repo');
-                    }}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2 text-sm text-gray-200 hover:text-white hover:bg-white/10 rounded-lg transition text-left"
-                  >
-                    <ExternalLink className="w-4 h-4 text-[#0066FF]" />
-                    <div>
-                      <div className="font-medium text-xs">Switch Repository URL</div>
-                      <div className="text-[10px] text-gray-400">Paste public or private repo link</div>
-                    </div>
-                  </button>
-
-                  <div className="my-1 border-t border-white/10"></div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAddMenuOpen(false);
-                      selectSEORecommended();
-                      handleSaveSelectedFiles();
-                    }}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2 text-sm text-gray-200 hover:text-white hover:bg-white/10 rounded-lg transition text-left"
-                  >
-                    <Sparkles className="w-4 h-4 text-emerald-400" />
-                    <div>
-                      <div className="font-medium text-xs">Load SEO Essentials</div>
-                      <div className="text-[10px] text-gray-400">Auto-add HTML, robots, sitemap</div>
-                    </div>
-                  </button>
-                </div>
+                </span>
+              ))}
+              {knowledgeFiles.length > 4 && (
+                <button
+                  type="button"
+                  onClick={() => setIsGitHubModalOpen(true)}
+                  className="text-[10px] text-gray-400 hover:text-[#00FFAA] underline"
+                >
+                  +{knowledgeFiles.length - 4} more
+                </button>
               )}
             </div>
+          )}
 
-            {/* Input Field */}
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={knowledgeFiles.length > 0 ? `Ask about ${owner}/${repo} (${knowledgeFiles.length} files attached)...` : "Ask AI to generate keywords, map topics, or audit SEO..."}
-              className="flex-1 bg-[#1A1A1A] border border-white/10 rounded-xl pl-4 pr-12 py-3.5 text-sm text-white focus:outline-none focus:border-[#00FFAA]/50 focus:ring-1 focus:ring-[#00FFAA]/50 transition shadow-inner"
-            />
+          {/* The Glassmorphic Input Capsule */}
+          <form
+            onSubmit={handleSend}
+            className="relative rounded-2xl bg-[#131316] border border-white/10 hover:border-white/20 focus-within:border-[#00FFAA]/50 focus-within:ring-2 focus-within:ring-[#00FFAA]/20 transition-all duration-200 shadow-xl overflow-hidden"
+          >
+            {/* Multi-line auto-expanding Textarea */}
+            <div className="px-4 pt-3.5 pb-2">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                rows={1}
+                placeholder={knowledgeFiles.length > 0
+                  ? `Ask WarpIndex about ${owner}/${repo} (${knowledgeFiles.length} files attached)...`
+                  : "Ask AI to generate keywords, map topics, audit code, or write rank-ready content..."}
+                className="w-full bg-transparent text-sm text-gray-100 placeholder-gray-500 focus:outline-none resize-none leading-relaxed min-h-[44px] max-h-[180px] scrollbar-hide font-sans"
+              />
+            </div>
 
-            {/* Send Button */}
-            <button
-              type="submit"
-              className="absolute right-2 p-2 bg-gradient-to-r from-[#0066FF] to-[#00FFAA] text-black rounded-lg shadow-lg hover:opacity-90 transition disabled:opacity-40"
-              disabled={!input.trim() || isTyping}
-            >
-              <Send className="w-4 h-4" />
-            </button>
+            {/* Bottom Toolbar inside the capsule */}
+            <div className="px-3 pb-2.5 pt-1.5 flex items-center justify-between border-t border-white/5 bg-black/20">
+
+              {/* Left Action Buttons */}
+              <div className="flex items-center gap-2">
+                {/* The + Button */}
+                <div className="relative" ref={addMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
+                    className="p-1.5 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition flex items-center justify-center group"
+                    title="Attach files or connect repo"
+                  >
+                    <Plus className={`w-3.5 h-3.5 transition-transform duration-200 ${isAddMenuOpen ? 'rotate-45 text-[#00FFAA]' : 'group-hover:rotate-90'}`} />
+                    <span className="text-[11px] font-medium ml-1.5 text-gray-300 group-hover:text-white hidden sm:inline">Add Context</span>
+                  </button>
+
+                  {/* Claude-Style Add Menu Dropdown */}
+                  {isAddMenuOpen && (
+                    <div className="absolute bottom-11 left-0 w-64 bg-[#181818] border border-white/15 rounded-xl shadow-2xl p-1.5 z-50 backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-2 duration-150">
+                      <div className="text-[10px] uppercase font-bold text-gray-400 px-3 py-1.5 tracking-wider">
+                        Add Repository Knowledge
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddMenuOpen(false);
+                          setIsGitHubModalOpen(true);
+                          setModalTab('select-files');
+                        }}
+                        className="w-full flex items-center space-x-2.5 px-3 py-2 text-sm text-gray-200 hover:text-white hover:bg-white/10 rounded-lg transition text-left"
+                      >
+                        <GithubIcon className="w-4 h-4 text-[#00FFAA]" />
+                        <div>
+                          <div className="font-medium text-xs">Add from GitHub</div>
+                          <div className="text-[10px] text-gray-400">Select files & folders from repo</div>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddMenuOpen(false);
+                          setIsGitHubModalOpen(true);
+                          setModalTab('select-repo');
+                        }}
+                        className="w-full flex items-center space-x-2.5 px-3 py-2 text-sm text-gray-200 hover:text-white hover:bg-white/10 rounded-lg transition text-left"
+                      >
+                        <ExternalLink className="w-4 h-4 text-[#0066FF]" />
+                        <div>
+                          <div className="font-medium text-xs">Switch Repository URL</div>
+                          <div className="text-[10px] text-gray-400">Paste public or private repo link</div>
+                        </div>
+                      </button>
+
+                      <div className="my-1 border-t border-white/10"></div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddMenuOpen(false);
+                          selectSEORecommended();
+                          handleSaveSelectedFiles();
+                        }}
+                        className="w-full flex items-center space-x-2.5 px-3 py-2 text-sm text-gray-200 hover:text-white hover:bg-white/10 rounded-lg transition text-left"
+                      >
+                        <Sparkles className="w-4 h-4 text-emerald-400" />
+                        <div>
+                          <div className="font-medium text-xs">Load SEO Essentials</div>
+                          <div className="text-[10px] text-gray-400">Auto-add HTML, robots, sitemap</div>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Hindsight Cloud indicator pill */}
+                <button
+                  type="button"
+                  onClick={() => setIsHindsightModalOpen(true)}
+                  className="hidden md:flex items-center gap-1 px-2.5 py-1 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/25 rounded-lg text-[11px] text-purple-300 transition"
+                  title="Hindsight Memory Active (Bank: seo-agent-bank)"
+                >
+                  <Brain className="w-3 h-3 text-purple-400" />
+                  <span>Hindsight</span>
+                </button>
+
+                {/* Model badge */}
+                <span className="hidden lg:flex items-center gap-1 text-[11px] text-gray-400 font-mono bg-white/5 border border-white/5 px-2 py-0.5 rounded-md">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  {selectedModel.replace('openai/', '')}
+                </span>
+              </div>
+
+              {/* Right Side: Clear + Counter + Send Button */}
+              <div className="flex items-center gap-2">
+                {input.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setInput('')}
+                    className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg text-xs transition"
+                    title="Clear text"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                <span className="text-[10px] text-gray-500 font-mono hidden sm:inline">
+                  {input.length > 0 ? `${input.length} chars` : '↵ to send'}
+                </span>
+
+                <button
+                  type="submit"
+                  disabled={!input.trim() || isTyping}
+                  className="px-4 py-2 bg-gradient-to-r from-[#0066FF] to-[#00FFAA] text-black text-xs font-bold rounded-xl transition duration-150 hover:opacity-95 hover:shadow-[0_0_18px_rgba(0,255,170,0.4)] active:scale-95 disabled:opacity-30 disabled:shadow-none flex items-center gap-1.5"
+                >
+                  {isTyping ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Thinking...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Send</span>
+                      <CornerDownLeft className="w-3 h-3 text-black/70" />
+                    </>
+                  )}
+                </button>
+              </div>
+
+            </div>
           </form>
 
-          <div className="flex items-center justify-between mt-2.5 px-1">
-            <span className="text-[10px] text-gray-500">
-              {knowledgeFiles.length > 0 ? `Active context: ${knowledgeFiles.length} files (${totalKbSelected.toFixed(1)} KB)` : 'Tip: Click "+" to attach files from your GitHub repository'}
+          {/* Footer Subtext */}
+          <div className="flex items-center justify-between px-1 text-[10px] text-gray-500">
+            <span>
+              Tip: Press <kbd className="px-1 py-0.5 bg-white/5 border border-white/10 rounded font-mono text-[9px] text-gray-400">Enter</kbd> to send, <kbd className="px-1 py-0.5 bg-white/5 border border-white/10 rounded font-mono text-[9px] text-gray-400">Shift + Enter</kbd> for newline
             </span>
-            <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span> Real-time AI Ready
+            <span className="text-emerald-400 font-mono flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span>
+              Memory & Codebase Synced
             </span>
           </div>
+
         </div>
 
         {/* Decorative Ambient Gradient */}
