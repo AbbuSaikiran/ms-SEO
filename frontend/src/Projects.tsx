@@ -16,7 +16,10 @@ const Projects = ({ session }: { session: any }) => {
     if (providerToken) {
       fetchGitHubData(providerToken);
     } else {
-      const storedToken = localStorage.getItem('github_token');
+      let storedToken = localStorage.getItem('github_token');
+      if (!storedToken || storedToken.startsWith('github_pat_11BIEM7GQ0vKu3QhoqttMt')) {
+        storedToken = (import.meta as any).env?.VITE_GITHUB_TOKEN || '';
+      }
       if (storedToken) {
         fetchGitHubData(storedToken);
       }

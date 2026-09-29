@@ -46,7 +46,13 @@ export default function AIAgentStudio() {
   const [owner, setOwner] = useState<string>(initialRepoState.owner || 'AbbuSaikiran');
   const [repo, setRepo] = useState<string>(initialRepoState.repo || 'ms-SEO');
   const [repoUrlInput, setRepoUrlInput] = useState<string>(initialRepoState.owner && initialRepoState.repo ? `${initialRepoState.owner}/${initialRepoState.repo}` : 'AbbuSaikiran/ms-SEO');
-  const [githubToken, setGithubToken] = useState<string>(localStorage.getItem('github_token') || '');
+  const [githubToken, setGithubToken] = useState<string>(() => {
+    const stored = localStorage.getItem('github_token');
+    if (stored && !stored.startsWith('github_pat_11BIEM7GQ0vKu3QhoqttMt')) return stored;
+    const envToken = (import.meta as any).env?.VITE_GITHUB_TOKEN || '';
+    if (envToken) localStorage.setItem('github_token', envToken);
+    return envToken || stored || '';
+  });
   const [userRepos, setUserRepos] = useState<any[]>([]);
 
   // Tree and selection state
