@@ -1,0 +1,18 @@
+{
+  "name": "github-seo-agent",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Autonomous GitHub SEO Agent: generates meta tags, sitemap.xml, robots.txt, and opens pull requests with Hindsight memory integration",
+  "scripts": {
+    "start": "node index.js",
+    "dry-run": "node -e \"process.env.DRY_RUN='1'; import('./index.js')\""
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.60.0",
+    "@octokit/rest": "^21.0.0",
+    "cheerio": "^1.0.0",
+    "fast-glob": "^3.3.2",
+    "simple-git": "^3.27.0",
+    "dotenv": "^16.4.7"
+  }
+}

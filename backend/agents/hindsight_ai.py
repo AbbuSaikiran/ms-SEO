@@ -14,34 +14,52 @@ DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "openai/gpt-oss-120b")
 FAST_MODEL = os.getenv("FAST_MODEL", "openai/gpt-oss-20b")
 
 
+import httpx
+import asyncio
+
 def get_groq_client():
+    http_client = httpx.AsyncClient(
+        timeout=httpx.Timeout(45.0, connect=12.0),
+        limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+    )
     return openai.AsyncOpenAI(
         api_key=GROQ_API_KEY,
-        base_url="https://api.groq.com/openai/v1"
+        base_url="https://api.groq.com/openai/v1",
+        http_client=http_client,
+        max_retries=2
     )
 
 
 async def _call_groq(system: str, user: str, fast: bool = False, max_tokens: int = 2048) -> str:
-    client = get_groq_client()
     preferred = FAST_MODEL if fast else DEFAULT_MODEL
     candidate_models = [preferred, "openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b", "llama-3.3-70b-versatile"]
     seen = set()
     models = [m for m in candidate_models if not (m in seen or seen.add(m))]
     
     last_err = ""
-    for model in models:
+    for attempt in range(2):
         try:
-            res = await client.chat.completions.create(
-                model=model,
-                messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-                temperature=0.7,
-                max_tokens=max_tokens
-            )
-            return res.choices[0].message.content
+            client = get_groq_client()
+            for model in models:
+                try:
+                    res = await client.chat.completions.create(
+                        model=model,
+                        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+                        temperature=0.7,
+                        max_tokens=max_tokens
+                    )
+                    return res.choices[0].message.content
+                except (openai.RateLimitError, openai.NotFoundError):
+                    continue
+                except openai.APIConnectionError as ce:
+                    last_err = f"Connection error: {str(ce)}"
+                    break
         except Exception as e:
             last_err = str(e)
-            continue
-    return f"Error: {last_err}"
+            if attempt == 0:
+                await asyncio.sleep(1.0)
+                continue
+    return f"Groq Error: {last_err}"
 
 
 # ─── TOOL 1: KEYWORD INTELLIGENCE (Ahrefs + Semrush) ────────────────────────

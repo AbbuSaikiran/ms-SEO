@@ -4,8 +4,6 @@ import { supabase } from './lib/supabase';
 import AIAgentStudio from './AIAgentStudio';
 import Projects from './Projects';
 import Home from './Home';
-import SEOMemoryAgent from './SEOMemoryAgent';
-import HindsightAI from './HindsightAI';
 
 // ==========================================
 // LANDING PAGE & AUTH SCREEN
@@ -133,8 +131,6 @@ function Sidebar({ handleLogout, session }: any) {
   const navItems = [
     { name: 'Projects', path: '/projects' }, 
     { name: 'AI SEO Agent', path: '/agent' }, 
-    { name: '🧠 Memory Agent', path: '/memory' },
-    { name: '⚡ Hindsight AI', path: '/hindsight' },
     { name: 'Analytics', path: '/analytics' }
   ];
   
@@ -284,8 +280,6 @@ function MainLayout({ session, setSession }: { session: any, setSession: any }) 
           <Route path="/" element={<Home />} />
           <Route path="/projects" element={<Projects session={session} />} />
           <Route path="/agent" element={<><TopHeader title="AI SEO Agent" /><AIAgentStudio /></>} />
-          <Route path="/memory" element={<SEOMemoryAgent />} />
-          <Route path="/hindsight" element={<HindsightAI />} />
           <Route path="/analytics" element={<GenericPage title="Analytics" description="Track organic traffic, rankings, and AI-driven growth metrics." icon="📈" />} />
           <Route path="/integrations" element={<GenericPage title="System Integrations" description="Connect your Google Search Console, CMS, Analytics, and external data sources." icon="🔌" />} />
           <Route path="/upgrade" element={<UpgradePage />} />

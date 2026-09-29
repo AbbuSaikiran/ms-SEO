@@ -10,6 +10,16 @@ import os
 from datetime import datetime, timezone
 from typing import Optional
 
+try:
+    from memory.hindsight import retain_seo_memory, recall_seo_memory, reflect_seo_memory
+except ImportError:
+    try:
+        from backend.memory.hindsight import retain_seo_memory, recall_seo_memory, reflect_seo_memory
+    except ImportError:
+        def retain_seo_memory(*args, **kwargs): return {"success": False}
+        def recall_seo_memory(*args, **kwargs): return []
+        def reflect_seo_memory(*args, **kwargs): return {"text": "", "facts": []}
+
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "seo_memory.db")
 
 
@@ -104,6 +114,16 @@ def log_ranking(keyword: str, position: int, url: str = "",
     )
     conn.commit()
     conn.close()
+
+    try:
+        retain_seo_memory(
+            content=f"Keyword '{keyword}' reached position #{position} on {search_engine} for URL: {url}. Notes: {notes}",
+            metadata={"type": "ranking", "keyword": keyword, "position": str(position)},
+            tags=["ranking", keyword]
+        )
+    except Exception:
+        pass
+
     return {"status": "logged", "keyword": keyword, "position": position, "timestamp": now}
 
 
@@ -157,6 +177,16 @@ def log_optimization_event(event_type: str, description: str, url: str = "",
     )
     conn.commit()
     conn.close()
+
+    try:
+        retain_seo_memory(
+            content=f"Optimization event [{event_type}]: {description} on {url} targeting keyword '{keyword}'. Impact score: {impact_score}/5. Outcome: {outcome_notes}",
+            metadata={"type": "optimization", "event_type": event_type, "keyword": keyword},
+            tags=["optimization", event_type]
+        )
+    except Exception:
+        pass
+
     return {"status": "logged", "event_type": event_type, "timestamp": now}
 
 
@@ -187,6 +217,16 @@ def log_competitor_move(competitor_domain: str, move_type: str, description: str
     )
     conn.commit()
     conn.close()
+
+    try:
+        retain_seo_memory(
+            content=f"Competitor move by {competitor_domain} [{move_type}]: {description} affecting keyword '{affected_keyword}'",
+            metadata={"type": "competitor_move", "competitor": competitor_domain, "move_type": move_type},
+            tags=["competitor", competitor_domain]
+        )
+    except Exception:
+        pass
+
     return {"status": "logged", "competitor": competitor_domain, "timestamp": now}
 
 
@@ -294,6 +334,17 @@ def build_context_for_analysis(keyword: Optional[str] = None) -> str:
         context_parts.append("\n## Previous Agent Recommendations")
         for m in past_recommendations[:3]:
             context_parts.append(f"- [{m['created_at'][:10]}] {m['analysis_type']}: {m['recommendation'][:200]}...")
+
+    # Vectorize Hindsight Semantic & Temporal Memory recall
+    try:
+        hindsight_query = keyword or "SEO ranking trends and competitor movements"
+        h_memories = recall_seo_memory(hindsight_query)
+        if h_memories:
+            context_parts.append("\n## Hindsight Cloud Temporal Memory (Vectorize.io)")
+            for item in h_memories[:6]:
+                context_parts.append(f"- {item['text']}")
+    except Exception:
+        pass
 
     return "\n".join(context_parts)
 

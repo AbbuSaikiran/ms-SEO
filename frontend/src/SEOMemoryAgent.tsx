@@ -16,17 +16,6 @@ function ImpactBadge({ score }: { score: number }) {
   return <span style={{ color, fontWeight: 700, fontSize: 12 }}>{score > 0 ? `+${score}` : score}/5</span>;
 }
 
-function TrendBadge({ trend }: { trend: string }) {
-  const map: Record<string, { icon: string; color: string }> = {
-    improving: { icon: "↑", color: "#22c55e" },
-    declining: { icon: "↓", color: "#ef4444" },
-    stable: { icon: "→", color: "#94a3b8" },
-    no_data: { icon: "?", color: "#64748b" },
-  };
-  const t = map[trend] || map.no_data;
-  return <span style={{ color: t.color, fontWeight: 700 }}>{t.icon} {trend}</span>;
-}
-
 export default function SEOMemoryAgent() {
   const [tab, setTab] = useState<"dashboard" | "rankings" | "optimizations" | "competitors" | "citations" | "analyze">("dashboard");
   const [history, setHistory] = useState<any>(null);
@@ -52,7 +41,7 @@ export default function SEOMemoryAgent() {
 
   async function logRanking() {
     const res = await fetch(`${API}/agent/log-ranking`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...rankForm, position: parseInt(rankForm.position) }) });
-    const d = await res.json();
+    await res.json();
     setFormMsg(`✅ Ranking logged for "${rankForm.keyword}" at position ${rankForm.position}`);
     setRankForm({ keyword: "", position: "", url: "", search_engine: "Google", notes: "" });
     fetchHistory();

@@ -2,8 +2,30 @@ import React, { useState, useRef, useEffect } from "react";
 
 const API = "http://localhost:8000";
 
+export interface ToolField {
+  key: string;
+  label: string;
+  placeholder?: string;
+  required?: boolean;
+  multiline?: boolean;
+  type?: string;
+  options?: string[];
+}
+
+export interface ToolItem {
+  id: string;
+  icon: string;
+  name: string;
+  tagline: string;
+  color: string;
+  glow: string;
+  endpoint: string;
+  description: string;
+  fields: ToolField[];
+}
+
 // ─── Tool definitions ────────────────────────────────────────────────────────
-const TOOLS = [
+const TOOLS: ToolItem[] = [
   {
     id: "keywords",
     icon: "🔍",
@@ -282,7 +304,7 @@ export default function HindsightAI() {
                     <select style={{ ...inputStyle, appearance: "none" as any }}
                       value={formData[field.key] || field.options![0]}
                       onChange={e => setFormData({ ...formData, [field.key]: e.target.value })}>
-                      {field.options!.map(o => <option key={o} value={o}>{o.replace(/_/g, " ")}</option>)}
+                      {field.options!.map((o: string) => <option key={o} value={o}>{o.replace(/_/g, " ")}</option>)}
                     </select>
                   ) : field.multiline ? (
                     <textarea rows={5} style={{ ...inputStyle, resize: "vertical" as any, minHeight: 110 }}
