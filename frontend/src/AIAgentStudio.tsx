@@ -18,8 +18,7 @@ import {
   GitPullRequest,
   Terminal,
   Play,
-  UploadCloud,
-  GitCommit
+  UploadCloud
 } from 'lucide-react';
 import { getRepoTree, getFileContent, parseGitHubUrl, getUserRepos, pushCodeToGitHub } from './lib/github';
 
