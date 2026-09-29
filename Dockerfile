@@ -17,8 +17,8 @@ RUN apt-get update && apt-get install -y curl && \
     apt-get clean
 
 # Copy backend requirements and install
-COPY backend/requirements.txt ./backend/
-RUN pip install --no-cache-dir -r backend/requirements.txt
+COPY requirements.txt backend/requirements.txt* ./backend/
+RUN pip install --no-cache-dir -r ./backend/requirements.txt
 
 # Copy backend code
 COPY backend/ ./backend/
@@ -34,6 +34,8 @@ EXPOSE 8000
 # Set environment variables
 ENV HOST=0.0.0.0
 ENV PORT=8000
+ENV PYTHONUNBUFFERED=1
 
-# Command to run the backend server
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Command to run the backend server with dynamic PORT support for Railway / Cloud hosts
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+
